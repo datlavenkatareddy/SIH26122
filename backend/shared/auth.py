@@ -128,9 +128,33 @@ def decode_supabase_jwt(token: str) -> dict:
             # Network error connecting to JWKS endpoint; fall through.
             pass
         except (jwt.PyJWTError, jwt.PyJWKClientError) as e:
+            # If the token declares alg: none it's an unsigned dev token minted
+            # by the frontend's AuthProvider.tsx mintDevToken().  The JWKS
+            # client naturally rejects it with "Unable to find a signing key
+            # that matches: None" — an error that gives no hint about the fix.
+            # Detect that specific case and surface an actionable message.
+            _hint = ""
+            try:
+                import base64 as _b64, json as _json
+                _hdr_raw = token.split(".")[0]
+                _hdr_raw += "=" * (-len(_hdr_raw) % 4)
+                _decoded_alg = _json.loads(
+                    _b64.urlsafe_b64decode(_hdr_raw)
+                ).get("alg", "")
+                if _decoded_alg == "none":
+                    _hint = (
+                        " This looks like an unsigned dev token (alg: none) "
+                        "minted by the frontend's dev-mode login path. "
+                        "To accept it, set AUTH_DEV_MODE=true in backend/.env "
+                        "AND ensure SUPABASE_JWT_SECRET, SUPABASE_JWKS_URL, "
+                        "and SUPABASE_URL are all unset (or empty) so the "
+                        "dev-token fallback in shared/auth.py is reached."
+                    )
+            except Exception:
+                pass
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Invalid token: {str(e)}",
+                detail=f"Invalid token: {str(e)}{_hint}",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         except Exception:

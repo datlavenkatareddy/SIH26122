@@ -35,6 +35,23 @@ const DEV_EMAIL_KEY = 'setu_dev_email_v1';
 // profiles row via shared/auth.py's explicit AUTH_DEV_MODE fallback. This
 // is not a UI-only fake: it round-trips through the real backend and its
 // real database, so a misconfigured/missing profile genuinely fails.
+//
+// ─── REGRESSION GUARD ───────────────────────────────────────────────────────
+// The role shown in the UI is NOT determined by anything in this map.
+// It is resolved exclusively by the backend from the `profiles` DB row whose
+// `id` matches the `sub` claim in the minted dev token (via authApi.getMe()
+// → GET /api/v1/auth/me). The `id` field here is the only thing that matters.
+//
+// When adding a new demo account:
+//   1. Add an entry here with the correct UUID from the `profiles` table.
+//   2. Ensure backend/shared/seed.py seeds a matching row with that UUID,
+//      the correct `role` ('SITE_ENGINEER' or 'SUPERVISOR'), and `full_name`.
+//   3. Do NOT assume the role from another account's UUID will carry over —
+//      each UUID maps to exactly one `profiles` row and therefore one role.
+//   4. Verify by logging in and confirming the redirect:
+//      SITE_ENGINEER  →  /intake
+//      SUPERVISOR     →  /digest
+// ────────────────────────────────────────────────────────────────────────────
 const DEV_MODE_ACCOUNTS: Record<string, { password: string; id: string }> = {
   'site.engineer@sih26122.internal': { password: 'Demo123456!', id: '811a1e0f-976d-42ea-a37f-1096186daf36' },
   'supervisor@sih26122.internal': { password: 'Demo123456!', id: '4b8e6901-de81-490c-8bec-9761f62bee70' },

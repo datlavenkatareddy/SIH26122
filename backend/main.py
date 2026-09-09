@@ -1,13 +1,17 @@
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Must run before any backend module import below, since shared/db.py and
-# others read DATABASE_URL/SUPABASE_*/LLM_* from the environment at import
-# time (module-level `os.getenv(...)` calls) — loading .env after those
-# imports would leave them permanently unset for the life of the process.
-load_dotenv()
+# Explicit path: main.py lives at backend/main.py, so .parent → backend/.env.
+# This MUST run before any backend module import below — shared/db.py and
+# others read DATABASE_URL/SUPABASE_*/LLM_* at import time (module-level
+# os.getenv calls), so loading .env afterwards leaves them permanently unset.
+# Using __file__-relative path instead of bare load_dotenv() ensures the
+# correct backend/.env is found regardless of which directory uvicorn is
+# launched from (the project is always launched from SIH26122/, one level up).
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

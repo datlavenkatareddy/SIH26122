@@ -30,7 +30,13 @@ from dotenv import load_dotenv
 # main.py at all -- so this is the one place guaranteed to run before
 # DATABASE_URL is read below. Idempotent and harmless to call again from
 # main.py.
-load_dotenv()
+#
+# Explicit path relative to THIS FILE (backend/shared/db.py → up 2 levels →
+# backend/.env) so the correct .env is loaded regardless of the working
+# directory from which uvicorn / pytest / scripts are launched. Never rely
+# on CWD-relative load_dotenv() — the project is run from SIH26122/ (the
+# parent of backend/), which does NOT contain the real secrets file.
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
