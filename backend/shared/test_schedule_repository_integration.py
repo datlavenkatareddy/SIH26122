@@ -24,6 +24,7 @@ from backend.shared.schedule_repository import (
     ScheduleAlreadyExistsError,
     SchedulePersistenceError,
     list_schedule_dependencies,
+    list_schedule_wbs_activities,
     save_schedule,
 )
 from backend.shared.schemas import Schedule, ScheduleActivity
@@ -105,7 +106,8 @@ def test_persists_schedule_and_activities_with_correct_field_mapping():
         assert first["activity_id"] == expected.activity_id
         assert first["activity_name"] == expected.activity_name
         assert first["wbs_code"] == expected.wbs_code
-        assert first["discipline"] == expected.discipline
+        # the stored discipline is the canonical code (migration 016 normalises spellings on write)
+        assert first["discipline"] == expected.discipline.upper()
         assert first["location"] == expected.location
         assert first["asset_tag"] is None
         assert str(first["planned_start"]) == str(expected.planned_start)
@@ -220,6 +222,56 @@ def test_persists_dependencies_and_they_are_retrievable():
     print("✓ dependencies are persisted transactionally with the schedule and retrievable from PostgreSQL")
 
 
+_EXTRA_ACTIVITY_SQL = """
+    INSERT INTO schedule_activities (
+        schedule_id, activity_id, activity_name, wbs_code, discipline,
+        location, planned_start, planned_finish
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+"""
+
+
+def test_wbs_activities_excludes_null_empty_and_whitespace_wbs_code():
+    """list_schedule_wbs_activities() (M1 Feature #30 WBS tree) must exclude
+    NULL, empty-string, and whitespace-only wbs_code -- not just NULL. The
+    normal CSV ingestion path (backend.shared.schedule) already normalizes a
+    blank wbs_code column to NULL before it reaches this table, so an
+    empty-string or whitespace-only value can only occur via a different
+    ingestion path -- inserted directly here to prove the repository query
+    itself (not just the parser) enforces the exclusion.
+    """
+    schedule_id = _new_schedule_id()
+    schedule, parse_result = _valid_case(schedule_id)
+
+    try:
+        save_schedule(schedule, parse_result)
+
+        with get_connection() as conn:
+            conn.execute(
+                _EXTRA_ACTIVITY_SQL,
+                (schedule_id, f"{schedule_id}-empty", "Blank wbs_code activity", "",
+                 "Civil", "North Field", "2026-08-14", "2026-08-14"),
+            )
+            conn.execute(
+                _EXTRA_ACTIVITY_SQL,
+                (schedule_id, f"{schedule_id}-whitespace", "Whitespace wbs_code activity", "   ",
+                 "Civil", "North Field", "2026-08-14", "2026-08-14"),
+            )
+            conn.commit()
+
+        rows = list_schedule_wbs_activities(schedule_id)
+        activity_ids = {row["activity_id"] for row in rows}
+        assert f"{schedule_id}-empty" not in activity_ids
+        assert f"{schedule_id}-whitespace" not in activity_ids
+        assert activity_ids == {f"{schedule_id}-01", f"{schedule_id}-02"}
+
+        wbs_codes = [row["wbs_code"] for row in rows]
+        assert wbs_codes == sorted(wbs_codes)  # deterministic ordering by wbs_code, then activity_id
+    finally:
+        _cleanup(schedule_id)
+
+    print("✓ list_schedule_wbs_activities excludes NULL, empty-string, and whitespace-only wbs_code")
+
+
 if __name__ == "__main__":
     print("Checking database availability (DATABASE_URL)...")
     if not _database_available():
@@ -233,5 +285,6 @@ if __name__ == "__main__":
         test_duplicate_schedule_id_is_rejected()
         test_transaction_rolls_back_on_activity_failure()
         test_persists_dependencies_and_they_are_retrievable()
+        test_wbs_activities_excludes_null_empty_and_whitespace_wbs_code()
 
         print("\nM1 schedule persistence integration tests passed.")

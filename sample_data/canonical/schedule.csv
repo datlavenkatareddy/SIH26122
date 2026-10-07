@@ -1,46 +1,46 @@
-L6 Task ID,L5 Activity ID,Activity,Discipline,Unit,Planned Qty,Baseline Start,Baseline Finish,L1,L2
-CIV-PS3-TR-0180,1.01.01,Utility Trench Excavation CH 0+180 to CH 0+220,CIVIL,m,40.0,2026-08-14,2026-08-14,Pump Station 3,
-CIV-PS3-TR-0220,1.01.02,Utility Trench Excavation CH 0+220 to CH 0+260,CIVIL,m,40.0,2026-08-15,2026-08-16,Pump Station 3,
-CIV-PS3-FND-001,1.01.03,Pump P-101/P-102 Foundation Blinding,CIVIL,m3,65.0,2026-08-11,2026-08-13,Pump Station 3,
-CIV-PS3-FND-002,1.01.04,Pump P-101/P-102 Rebar & Formwork,CIVIL,t,12.0,2026-08-14,2026-08-18,Pump Station 3,
-CIV-PS3-FND-003,1.01.05,Pump P-101/P-102 Foundation Concrete Pour,CIVIL,m3,60.0,2026-08-19,2026-08-21,Pump Station 3,
-CIV-PS3-DRN-001,1.01.06,Stormwater Drainage Channel Installation,CIVIL,m,120.0,2026-08-12,2026-08-20,Pump Station 3,
-CIV-PS3-RD-001,1.01.07,Road Crossing Duct Bank Encasement,CIVIL,m,50.0,2026-08-18,2026-08-22,Perimeter Road,
-CIV-PS3-BKF-001,1.01.08,Trench Backfill & Compaction CH 0+000-0+180,CIVIL,m3,350.0,2026-08-15,2026-08-22,Pump Station 3,
-PIP-PS3-WLD-024,1.02.01,Utility Header Field Weld Joints,PIPING,joints,24.0,2026-08-11,2026-08-15,Pump Station 3,
-PIP-PS3-HDR-100,1.02.02,Above Ground Utility Header Fabrication,PIPING,m,100.0,2026-08-12,2026-08-22,Pump Station 3,
-PIP-PS3-HDR-100-A,1.02.02.01,Utility Header Spool Section A,PIPING,m,40.0,2026-08-12,2026-08-16,Pump Station 3,
-PIP-PS3-HDR-100-B,1.02.02.02,Utility Header Spool Section B,PIPING,m,30.0,2026-08-15,2026-08-19,Pump Station 3,
-PIP-PS3-HDR-100-C,1.02.02.03,Utility Header Spool Section C,PIPING,m,30.0,2026-08-18,2026-08-22,Pump Station 3,
-PIP-PS3-SPO-015,1.02.03,Firewater Line Spool Placement,PIPING,m,80.0,2026-08-11,2026-08-15,Pump Station 3,
-PIP-PS3-HYD-001,1.02.04,Hydrostatic Pressure Test Firewater Sector 1,PIPING,test,1.0,2026-08-18,2026-08-19,Pump Station 3,
-PIP-PS3-VLV-005,1.02.05,12-inch Gate Valve Installation,PIPING,ea,8.0,2026-08-19,2026-08-22,Pump Station 3,
-PIP-PS3-SPT-030,1.02.06,Pipe Support Secondary Steel Erection,PIPING,ea,100.0,2026-08-13,2026-08-21,Pump Station 3,
-PIP-PS3-TIE-002,1.02.07,Tie-in Spool Fit-up Manifold M-01,PIPING,joints,4.0,2026-08-21,2026-08-22,Manifold M-01,
-MECH-PS3-DWP-003,1.03.01,Dewatering Pump Relocation,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-14,2026-08-14,Pump Station 3,
-EQP-PS3-PMP-101,1.03.02,Crude Pump P-101 Baseplate Grouting,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-18,2026-08-20,Pump Station 3,
-EQP-PS3-PMP-102,1.03.03,Crude Pump P-102 Positioning & Alignment,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-19,2026-08-21,Pump Station 3,
-EQP-PS3-TK-001,1.03.04,Sump Tank TK-01 Internal Inspection,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-12,2026-08-15,Sump Area,
-EQP-PS3-SKD-002,1.03.05,Chemical Dosing Skid SK-02 Positioning,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-15,2026-08-18,Chemical Area,
-EQP-PS3-AIR-001,1.03.06,Air Receiver Vessel V-103 Erection,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-13,2026-08-15,Utility Bay,
-EQP-PS3-GEN-001,1.03.07,Diesel Generator DG-01 Installation,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-20,2026-08-22,Generator Bay,
-ELE-PS3-CT-011,1.04.01,Cable Trench Bedding at MCC-02,ELECTRICAL,m,160.0,2026-08-10,2026-08-16,MCC Building,
-ELE-PS3-CT-012,1.04.02,Cable Trench Bedding at MCC-01,ELECTRICAL,m,140.0,2026-08-11,2026-08-17,MCC Building,
-ELE-PS3-CBL-001,1.04.03,11kV Medium Voltage Cable Pulling,ELECTRICAL,m,500.0,2026-08-12,2026-08-18,Substation,
-ELE-PS3-CBL-002,1.04.04,415V Low Voltage Auxiliary Cable Pulling,ELECTRICAL,m,450.0,2026-08-18,2026-08-22,Pump Station 3,
-ELE-PS3-TR-005,1.04.05,Cable Tray Installation Piperack Tier 2,ELECTRICAL,m,200.0,2026-08-14,2026-08-20,Piperack PR-01,
-ELE-PS3-EAR-001,1.04.06,Earth Pit Grid Installation,ELECTRICAL,pits,24.0,2026-08-11,2026-08-16,Substation Yard,
-ELE-PS3-LGT-002,1.04.07,High Mast Lighting Wiring & Conduits,ELECTRICAL,poles,6.0,2026-08-19,2026-08-22,Yard Area,
-ELE-PS3-SWG-001,1.04.08,11kV Switchgear Panel Positioning,ELECTRICAL,panels,8.0,2026-08-15,2026-08-19,Substation,
-INS-PS3-JB-001,1.05.01,Field Junction Box Installation,INSTRUMENTATION,ea,12.0,2026-08-12,2026-08-16,Pump Station 3,
-INS-PS3-ITR-002,1.05.02,Instrument Cable Tray Installation,INSTRUMENTATION,m,180.0,2026-08-13,2026-08-18,Piperack PR-01,
-INS-PS3-CBL-004,1.05.03,Signal & Thermocouple Cable Pulling,INSTRUMENTATION,m,600.0,2026-08-18,2026-08-22,Control Room,
-INS-PS3-PT-021,1.05.04,Pressure Transmitter Mounting & Impulse Piping,INSTRUMENTATION,ea,6.0,2026-08-19,2026-08-22,Pump Station 3,
-INS-PS3-FT-010,1.05.05,Ultrasonic Flowmeter Spool Installation,INSTRUMENTATION,ea,2.0,2026-08-20,2026-08-22,Pump Station 3,
-INS-PS3-FGS-001,1.05.06,Fire & Gas Detector Mounting,INSTRUMENTATION,ea,16.0,2026-08-18,2026-08-22,Process Area,
-INS-PS3-CAL-003,1.05.07,Control Valve Bench Calibration,INSTRUMENTATION,ea,10.0,2026-08-21,2026-08-22,Instrument Workshop,
-HSE-PS3-IND-001,1.06.01,Daily Site Safety Induction & Toolbox Talks,HSE,days,10.0,2026-08-11,2026-08-22,Site Wide,
-HSE-PS3-BAR-002,1.06.02,Deep Excavation Hard Barricading,HSE,m,300.0,2026-08-11,2026-08-16,Trench Zone,
-HSE-PS3-GAS-001,1.06.03,Confined Space Atmospheric Gas Monitoring,HSE,checks,40.0,2026-08-14,2026-08-22,Sump / Trench,
-HSE-PS3-WST-003,1.06.04,Hazardous Chemical Waste Storage & Manifesting,HSE,bins,12.0,2026-08-12,2026-08-21,Waste Storage,
-HSE-PS3-AUD-001,1.06.05,Weekly Environmental Compliance Audit,HSE,audits,2.0,2026-08-15,2026-08-22,Site Wide,
+L6 Task ID,L5 Activity ID,Activity,Discipline,Unit,Planned Qty,Baseline Start,Baseline Finish,L1,L2,Predecessor Activity ID,Relationship Type,Lag Days,Total Float,Is Critical
+CIV-PS3-TR-0180,1.01.01,Utility Trench Excavation CH 0+180 to CH 0+220,CIVIL,m,40.0,2026-08-14,2026-08-14,Pump Station 3,,HSE-PS3-BAR-002,SS,3,2,false
+CIV-PS3-TR-0220,1.01.02,Utility Trench Excavation CH 0+220 to CH 0+260,CIVIL,m,40.0,2026-08-15,2026-08-16,Pump Station 3,,CIV-PS3-TR-0180,FS,0,2,false
+CIV-PS3-FND-001,1.01.03,Pump P-101/P-102 Foundation Blinding,CIVIL,m3,65.0,2026-08-11,2026-08-13,Pump Station 3,,,,,0,true
+CIV-PS3-FND-002,1.01.04,Pump P-101/P-102 Rebar & Formwork,CIVIL,t,12.0,2026-08-14,2026-08-18,Pump Station 3,,CIV-PS3-FND-001,FS,0,0,true
+CIV-PS3-FND-003,1.01.05,Pump P-101/P-102 Foundation Concrete Pour,CIVIL,m3,60.0,2026-08-19,2026-08-21,Pump Station 3,,CIV-PS3-FND-002,FS,0,0,true
+CIV-PS3-DRN-001,1.01.06,Stormwater Drainage Channel Installation,CIVIL,m,120.0,2026-08-12,2026-08-20,Pump Station 3,,CIV-PS3-FND-001,SS,1,8,false
+CIV-PS3-RD-001,1.01.07,Road Crossing Duct Bank Encasement,CIVIL,m,50.0,2026-08-18,2026-08-22,Perimeter Road,,CIV-PS3-TR-0220,FS,1,7,false
+CIV-PS3-BKF-001,1.01.08,Trench Backfill & Compaction CH 0+000-0+180,CIVIL,m3,350.0,2026-08-15,2026-08-22,Pump Station 3,,CIV-PS3-TR-0180,SS,1,9,false
+PIP-PS3-WLD-024,1.02.01,Utility Header Field Weld Joints,PIPING,joints,24.0,2026-08-11,2026-08-15,Pump Station 3,,,,,3,false
+PIP-PS3-HDR-100,1.02.02,Above Ground Utility Header Fabrication,PIPING,m,100.0,2026-08-12,2026-08-22,Pump Station 3,,,,,0,true
+PIP-PS3-HDR-100-A,1.02.02.01,Utility Header Spool Section A,PIPING,m,40.0,2026-08-12,2026-08-16,Pump Station 3,,,,,0,true
+PIP-PS3-HDR-100-B,1.02.02.02,Utility Header Spool Section B,PIPING,m,30.0,2026-08-15,2026-08-19,Pump Station 3,,PIP-PS3-HDR-100-A,SS,3,0,true
+PIP-PS3-HDR-100-C,1.02.02.03,Utility Header Spool Section C,PIPING,m,30.0,2026-08-18,2026-08-22,Pump Station 3,,PIP-PS3-HDR-100-B;PIP-PS3-HDR-100-A,SS;FF,3;5,0,true
+PIP-PS3-SPO-015,1.02.03,Firewater Line Spool Placement,PIPING,m,80.0,2026-08-11,2026-08-15,Pump Station 3,,,,,3,false
+PIP-PS3-HYD-001,1.02.04,Hydrostatic Pressure Test Firewater Sector 1,PIPING,test,1.0,2026-08-18,2026-08-19,Pump Station 3,,PIP-PS3-SPO-015;PIP-PS3-WLD-024,FS;FS,2;2,1,false
+PIP-PS3-VLV-005,1.02.05,12-inch Gate Valve Installation,PIPING,ea,8.0,2026-08-19,2026-08-22,Pump Station 3,,PIP-PS3-HYD-001,FS,0,2,false
+PIP-PS3-SPT-030,1.02.06,Pipe Support Secondary Steel Erection,PIPING,ea,100.0,2026-08-13,2026-08-21,Pump Station 3,,PIP-PS3-SPO-015,SS,2,10,false
+PIP-PS3-TIE-002,1.02.07,Tie-in Spool Fit-up Manifold M-01,PIPING,joints,4.0,2026-08-21,2026-08-22,Manifold M-01,,PIP-PS3-HDR-100-B;PIP-PS3-HYD-001,FS;FS,1;1,6,false
+MECH-PS3-DWP-003,1.03.01,Dewatering Pump Relocation,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-14,2026-08-14,Pump Station 3,,CIV-PS3-FND-001,FS,0,6,false
+EQP-PS3-PMP-101,1.03.02,Crude Pump P-101 Baseplate Grouting,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-18,2026-08-20,Pump Station 3,,CIV-PS3-FND-002,FS,0,2,false
+EQP-PS3-PMP-102,1.03.03,Crude Pump P-102 Positioning & Alignment,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-19,2026-08-21,Pump Station 3,,EQP-PS3-PMP-101;EQP-PS3-PMP-101,SS;FF,1;1,2,false
+EQP-PS3-TK-001,1.03.04,Sump Tank TK-01 Internal Inspection,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-12,2026-08-15,Sump Area,,,,,12,false
+EQP-PS3-SKD-002,1.03.05,Chemical Dosing Skid SK-02 Positioning,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-15,2026-08-18,Chemical Area,,,,,11,false
+EQP-PS3-AIR-001,1.03.06,Air Receiver Vessel V-103 Erection,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-13,2026-08-15,Utility Bay,,,,,12,false
+EQP-PS3-GEN-001,1.03.07,Diesel Generator DG-01 Installation,STATIC_ROTATING_EQUIPMENT,ea,1.0,2026-08-20,2026-08-22,Generator Bay,,,,,7,false
+ELE-PS3-CT-011,1.04.01,Cable Trench Bedding at MCC-02,ELECTRICAL,m,160.0,2026-08-10,2026-08-16,MCC Building,,,,,6,false
+ELE-PS3-CT-012,1.04.02,Cable Trench Bedding at MCC-01,ELECTRICAL,m,140.0,2026-08-11,2026-08-17,MCC Building,,ELE-PS3-CT-011,SS,1,6,false
+ELE-PS3-CBL-001,1.04.03,11kV Medium Voltage Cable Pulling,ELECTRICAL,m,500.0,2026-08-12,2026-08-18,Substation,,ELE-PS3-CT-011,SS,2,0,true
+ELE-PS3-CBL-002,1.04.04,415V Low Voltage Auxiliary Cable Pulling,ELECTRICAL,m,450.0,2026-08-18,2026-08-22,Pump Station 3,,ELE-PS3-CT-012;ELE-PS3-TR-005,FS;SS,0;4,4,false
+ELE-PS3-TR-005,1.04.05,Cable Tray Installation Piperack Tier 2,ELECTRICAL,m,200.0,2026-08-14,2026-08-20,Piperack PR-01,,ELE-PS3-CT-011,SS,4,8,false
+ELE-PS3-EAR-001,1.04.06,Earth Pit Grid Installation,ELECTRICAL,pits,24.0,2026-08-11,2026-08-16,Substation Yard,,,,,10,false
+ELE-PS3-LGT-002,1.04.07,High Mast Lighting Wiring & Conduits,ELECTRICAL,poles,6.0,2026-08-19,2026-08-22,Yard Area,,ELE-PS3-EAR-001,FS,2,9,false
+ELE-PS3-SWG-001,1.04.08,11kV Switchgear Panel Positioning,ELECTRICAL,panels,8.0,2026-08-15,2026-08-19,Substation,,ELE-PS3-EAR-001,FS,-1,8,false
+INS-PS3-JB-001,1.05.01,Field Junction Box Installation,INSTRUMENTATION,ea,12.0,2026-08-12,2026-08-16,Pump Station 3,,,,,10,false
+INS-PS3-ITR-002,1.05.02,Instrument Cable Tray Installation,INSTRUMENTATION,m,180.0,2026-08-13,2026-08-18,Piperack PR-01,,INS-PS3-JB-001,SS,1,9,false
+INS-PS3-CBL-004,1.05.03,Signal & Thermocouple Cable Pulling,INSTRUMENTATION,m,600.0,2026-08-18,2026-08-22,Control Room,,INS-PS3-ITR-002,FS,0,5,false
+INS-PS3-PT-021,1.05.04,Pressure Transmitter Mounting & Impulse Piping,INSTRUMENTATION,ea,6.0,2026-08-19,2026-08-22,Pump Station 3,,INS-PS3-JB-001,FS,2,7,false
+INS-PS3-FT-010,1.05.05,Ultrasonic Flowmeter Spool Installation,INSTRUMENTATION,ea,2.0,2026-08-20,2026-08-22,Pump Station 3,,PIP-PS3-HYD-001,FS,0,8,false
+INS-PS3-FGS-001,1.05.06,Fire & Gas Detector Mounting,INSTRUMENTATION,ea,16.0,2026-08-18,2026-08-22,Process Area,,INS-PS3-JB-001,FS,1,14,false
+INS-PS3-CAL-003,1.05.07,Control Valve Bench Calibration,INSTRUMENTATION,ea,10.0,2026-08-21,2026-08-22,Instrument Workshop,,INS-PS3-FT-010,SF,1,12,false
+HSE-PS3-IND-001,1.06.01,Daily Site Safety Induction & Toolbox Talks,HSE,days,10.0,2026-08-11,2026-08-22,Site Wide,,,,,20,false
+HSE-PS3-BAR-002,1.06.02,Deep Excavation Hard Barricading,HSE,m,300.0,2026-08-11,2026-08-16,Trench Zone,,,,,15,false
+HSE-PS3-GAS-001,1.06.03,Confined Space Atmospheric Gas Monitoring,HSE,checks,40.0,2026-08-14,2026-08-22,Sump / Trench,,CIV-PS3-TR-0180,SS,0,15,false
+HSE-PS3-WST-003,1.06.04,Hazardous Chemical Waste Storage & Manifesting,HSE,bins,12.0,2026-08-12,2026-08-21,Waste Storage,,,,,18,false
+HSE-PS3-AUD-001,1.06.05,Weekly Environmental Compliance Audit,HSE,audits,2.0,2026-08-15,2026-08-22,Site Wide,,,,,18,false

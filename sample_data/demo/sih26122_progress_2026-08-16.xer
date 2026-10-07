@@ -1,0 +1,21 @@
+ERMHDR	19.12	2026-08-10	Project	admin	SIH26122_Planner	NORTH_FIELD_CORRIDOR	USD	DD/MM/YYYY	1	0	0
+%T	PROJECT
+%F	proj_id	proj_short_name	plan_start_date	plan_end_date
+%R	1	SIH26122_NFU	2026-08-10 08:00	2026-08-22 18:00
+%T	PROJWBS
+%F	wbs_id	proj_id	parent_wbs_id	wbs_short_name	wbs_name
+%R	100	1		1	North Field Utility Corridor
+%R	101	1	100	1.01	Civil Works
+%R	102	1	100	1.02	Piping Works
+%R	103	1	100	1.03	Static and Rotating Equipment
+%R	104	1	100	1.04	Electrical Works
+%R	105	1	100	1.05	Instrumentation Works
+%R	106	1	100	1.06	Health Safety Environment
+%T	TASK
+%F	task_id	proj_id	wbs_id	task_code	task_name	task_type	status_code	target_drtn_hr_cnt	target_start_date	target_end_date	total_float_hr_cnt	cstr_type	cstr_date
+%R	2001	1	101	CIV-PS3-DRN-001	Stormwater Drainage Channel Installation	TT_Task	TK_Active	80	2026-08-12 08:00	2026-08-20 18:00	0		
+%R	2002	1	102	PIP-PS3-HDR-100-B	Utility Header Spool Section B	TT_Task	TK_Active	80	2026-08-15 08:00	2026-08-19 18:00	0		
+%R	2003	1	104	ELE-PS3-CT-012	Cable Trench Bedding at MCC-01	TT_Task	TK_Active	80	2026-08-11 08:00	2026-08-17 18:00	0		
+%R	2004	1	105	INS-PS3-ITR-002	Instrument Cable Tray Installation	TT_Task	TK_Active	80	2026-08-13 08:00	2026-08-18 18:00	0		
+%R	2005	1	106	HSE-PS3-BAR-002	Deep Excavation Hard Barricading	TT_Task	TK_Complete	80	2026-08-11 08:00	2026-08-16 18:00	0		
+%R	2006	1	101	CIV-PS3-RD-001	Road Crossing Duct Bank Encasement	TT_Task	TK_NotStart	80	2026-08-18 08:00	2026-08-22 18:00	0		

@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -39,14 +40,28 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+          subtle: "hsl(var(--card-subtle))",
         },
         ai: "hsl(var(--color-ai))",
         status: {
           extracted: "hsl(var(--status-extracted))",
+          matched: "hsl(var(--status-matched))",
+          unmatched: "hsl(var(--status-unmatched))",
           review: "hsl(var(--status-review))",
           validated: "hsl(var(--status-validated))",
           approved: "hsl(var(--status-approved))",
           rejected: "hsl(var(--status-rejected))",
+          hold: "hsl(var(--status-hold))",
+          warning: "hsl(var(--status-warning))",
+          error: "hsl(var(--status-error))",
+          corroborates: "hsl(var(--status-corroborates))",
+          contradicts: "hsl(var(--status-contradicts))",
+        },
+        prov: {
+          ai: "hsl(var(--prov-ai))",
+          schedule: "hsl(var(--prov-schedule))",
+          engineer: "hsl(var(--prov-engineer))",
+          supervisor: "hsl(var(--prov-supervisor))",
         },
         disc: {
           civil: "hsl(var(--disc-civil))",

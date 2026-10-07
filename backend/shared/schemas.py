@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class Schedule(BaseModel):
@@ -18,6 +18,12 @@ class Schedule(BaseModel):
     project_name: str
     data_date: Optional[date] = None
     source_format: Optional[str] = None
+
+
+class ExecutionState(str, Enum):
+    NOT_STARTED = "NOT_STARTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
 
 
 class ScheduleActivity(BaseModel):
@@ -33,6 +39,8 @@ class ScheduleActivity(BaseModel):
     planned_quantity: Optional[float] = None
     uom: Optional[str] = None
     baseline_pct_complete: float = Field(default=0.0, ge=0.0, le=100.0)
+    total_float: Optional[float] = None
+    is_critical: Optional[bool] = None
 
 
 class ScheduleDependency(BaseModel):
@@ -41,6 +49,24 @@ class ScheduleDependency(BaseModel):
     predecessor_activity_id: str
     successor_activity_id: str
     relationship_type: str = "FS"
+    lag_days: float = 0.0
+
+
+# ---------- M1 Feature #30 (WBS Granularity Bridge, schedule-side): WBS tree ----------
+
+class WBSGroupActivity(BaseModel):
+    activity_id: str
+    planned_quantity: Optional[float] = None
+
+
+class WBSGroup(BaseModel):
+    wbs_code: str
+    activities: list[WBSGroupActivity]
+
+
+class WBSTreeResponse(BaseModel):
+    schedule_id: str
+    wbs_groups: list[WBSGroup]
 
 
 # ---------- shared enums (used across M2/M3/M4) ----------
@@ -52,6 +78,10 @@ class Discipline(str, Enum):
     ELECTRICAL = "ELECTRICAL"
     INSTRUMENTATION = "INSTRUMENTATION"
     HSE = "HSE"
+    STRUCTURAL = "STRUCTURAL"
+    PROCESS = "PROCESS"
+    DRILLING = "DRILLING"
+    LOGISTICS = "LOGISTICS"
 
 
 class EventType(str, Enum):
@@ -88,6 +118,19 @@ class InputChannel(str, Enum):
 class UploadPurpose(str, Enum):
     EVIDENCE_PHOTO = "EVIDENCE_PHOTO"
     SCANNED_DIARY = "SCANNED_DIARY"
+
+
+class ClarificationStatus(str, Enum):
+    NONE = "NONE"
+    PENDING = "PENDING"
+    ANSWERED = "ANSWERED"
+
+
+class ProvenanceTag(str, Enum):
+    AI_EXTRACTED = "AI_EXTRACTED"
+    SCHEDULE_AUTO_FILLED = "SCHEDULE_AUTO_FILLED"
+    ENGINEER_ENTERED = "ENGINEER_ENTERED"
+    SUPERVISOR_EDITED = "SUPERVISOR_EDITED"
 
 
 class ExecutionClaim(BaseModel):
@@ -152,6 +195,24 @@ class TextClaimRequest(BaseModel):
     raw_claim_text: str
     input_channel: InputChannel = InputChannel.TYPED_TEXT
     schedule_id: Optional[str] = None  # if omitted, defaults to most recently uploaded schedule
+    evidence_filename: Optional[str] = None
+    evidence_base64: Optional[str] = None
+
+
+class ClarifyClaimRequest(BaseModel):
+    answer: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_clarification_input(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            ans = data.get("answer")
+            if ans is None:
+                # Tolerant fallback if a legacy caller sent clarification_answer
+                ans = data.get("clarification_answer")
+            if ans is not None:
+                return {**data, "answer": str(ans).strip()}
+        return data
 
 
 class ClaimResponse(BaseModel):
@@ -177,6 +238,12 @@ class ClaimResponse(BaseModel):
     supervisor_id: Optional[str] = None
     photo_path: Optional[str] = None
     status: str
+    clarification_status: str = ClarificationStatus.NONE.value
+    clarification_question: Optional[str] = None
+    clarification_answer: Optional[str] = None
+    field_provenance: dict[str, str] = Field(default_factory=dict)
+    priority_score: Optional[float] = None    # Feature 32, set by /check and /review-queue
+    priority_reasons: Optional[str] = None    # newline-separated "[Tag] explanation" lines
     created_at: datetime
 
 

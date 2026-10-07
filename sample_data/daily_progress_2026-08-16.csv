@@ -1,0 +1,6 @@
+Report Date,Activity ID,Task ID,Discipline,Work Description,Unit,Planned Qty,Prior Actual,Today Actual,Cumulative Actual,Progress Pct,Status,Evidence Reference,Remarks
+2026-08-16,CIV-PS3-DRN-001,CIV-PS3-DRN-001-01,Civil,Stormwater Drainage Channel Installation,m,120,60,30,90,75.0,Ongoing,daily_progress_report_2026-08-16.txt,Channel lining progressing on schedule.
+2026-08-16,PIP-PS3-HDR-100-B,PIP-PS3-HDR-100-B-01,Piping,Utility Header Spool Section B fabrication,m,30,10,10,20,66.7,Ongoing,site_diary_2026-08-16.jpg,Spool fit-up verified before weld-out.
+2026-08-16,ELE-PS3-CT-012,ELE-PS3-CT-012-01,Electrical,Cable trench bedding at MCC-01,m,140,95,25,120,85.7,Ongoing,discipline_progress_2026-08-16.xlsx,Bedding sand compacted to spec.
+2026-08-16,INS-PS3-ITR-002,INS-PS3-ITR-002-01,Instrumentation,Instrument cable tray installation at PR-01,m,180,100,30,130,72.2,Ongoing,discipline_progress_2026-08-16.xlsx,Tray supports aligned per drawing.
+2026-08-16,HSE-PS3-BAR-002,HSE-PS3-BAR-002-01,HSE,Deep excavation hard barricading,m,300,270,30,300,100.0,Complete,site_diary_2026-08-16.jpg,Full barricade run closed out and inspected.

@@ -4,94 +4,168 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── IndianOil Brand Tokens ──────────────────────────────────────────────────
-   Orange  : #F47920  (primary CTA, active nav, highlights)
-   Navy    : #003087  (header, sidebar, dark surfaces)
-   Blue    : #1565C0  (accent, links, chart fills)
-   Light   : #E8F4FD  (light-mode page background)
-   White   : #FFFFFF
-   ───────────────────────────────────────────────────────────────────────── */
+/* ── Setu AI Industrial Design System & Multi-Level Surface Hierarchy ────────
+   Brand Foundation:
+   - Primary Dark Background : #061526, #071B2D, #0A2340, #0B2D4A
+   - Primary Brand Orange    : #FF7A18, #FF8A25, #FF941F (CTA, active nav, anchors)
+   - Secondary Cyan / Teal   : #14B8A6, #19C3B1, #22D3EE (AI analytics, progress, indicators)
+   - Primary Text            : #F5F7FA
+   - Secondary Text          : #D8E2EA
+   - Muted Text              : #94A8B8
+   - Borders                 : #1E3A5F / rgba(34, 211, 238, 0.15)
+   ───────────────────────────────────────────────────────────────────────────── */
 
 @layer base {
   :root {
-    /* Page surface */
-    --background: 210 60% 96%;         /* #E8F4FD */
-    --foreground: 220 80% 12%;         /* deep navy text */
+    /* Level 0: Light Page Surface (#F4F8FC) */
+    --background: 212 60% 97%;
+    --foreground: 213 73% 9%;          /* #061526 */
 
-    /* Cards */
-    --card: 0 0% 100%;                 /* #FFFFFF */
-    --card-foreground: 220 80% 12%;
+    /* Level 2: Cards (#FFFFFF) */
+    --card: 0 0% 100%;
+    --card-foreground: 213 73% 9%;
+
+    /* Level 3: Nested Panels (#EEF5FC) */
+    --card-subtle: 210 60% 96%;
 
     /* Popover */
     --popover: 0 0% 100%;
-    --popover-foreground: 220 80% 12%;
+    --popover-foreground: 213 73% 9%;
 
-    /* Primary = IndianOil Orange #F47920 */
-    --primary: 27 90% 54%;
+    /* Primary = Brand Orange #FF7A18 */
+    --primary: 25 100% 55%;
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 25 100% 48%;
 
-    /* Secondary = Light Blue tint */
-    --secondary: 210 60% 94%;
-    --secondary-foreground: 220 80% 15%;
+    /* Secondary = Industrial Slate/Navy tint */
+    --secondary: 210 40% 93%;
+    --secondary-foreground: 213 73% 9%;
 
-    /* Muted */
-    --muted: 210 40% 92%;
-    --muted-foreground: 220 20% 46%;
+    /* Muted Text & Backgrounds */
+    --muted: 210 40% 93%;
+    --muted-foreground: 215 25% 32%;   /* #415264 - High Contrast Slate/Navy */
 
-    /* Accent = IndianOil Blue #1565C0 */
-    --accent: 215 76% 42%;
+    /* Accent = Cyan / Teal #0284C7 / #0D9488 */
+    --accent: 200 95% 40%;
     --accent-foreground: 0 0% 100%;
 
     /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Borders & inputs */
-    --border: 210 40% 84%;
-    --input: 210 40% 84%;
-    --ring: 27 90% 54%;
+    /* Borders & Level 4 Inputs (#CBD5E1) */
+    --border: 214 32% 86%;
+    --border-subtle: 214 32% 92%;
+    --input: 214 32% 88%;
+    --ring: 25 100% 55%;
 
     --radius: 0.75rem;
 
-    /* Semantic status colors */
-    --status-approved: 142 76% 36%;
-    --status-review: 38 92% 44%;
-    --status-rejected: 0 72% 51%;
-    --status-ai: 262 83% 58%;
+    /* Semantic status colors (light mode) */
+    --status-extracted: 258 90% 66%;
+    --status-matched: 173 80% 36%;
+    --status-unmatched: 28 100% 50%;
+    --status-review: 28 100% 50%;
+    --status-validated: 189 94% 43%;
+    --status-approved: 160 84% 39%;
+    --status-rejected: 0 84% 60%;
+    --status-hold: 215 20% 55%;
+    --status-warning: 28 100% 45%;
+    --status-error: 0 84% 60%;
+    --status-corroborates: 160 84% 36%;
+    --status-contradicts: 0 84% 60%;
+    --color-ai: 189 94% 43%;
+
+    /* Provenance colors */
+    --prov-ocr: 258 90% 66%;
+    --prov-speech: 173 80% 36%;
+    --prov-typed: 200 95% 40%;
+    --prov-csv: 28 100% 50%;
+    --prov-ai: 189 94% 43%;
+    --prov-schedule: 173 80% 36%;
+    --prov-engineer: 200 95% 40%;
+    --prov-supervisor: 25 100% 55%;
+
+    /* Discipline colors */
+    --disc-civil: 25 100% 55%;
+    --disc-piping: 200 95% 40%;
+    --disc-equip: 173 80% 36%;
+    --disc-elec: 43 96% 48%;
+    --disc-inst: 270 70% 60%;
+    --disc-hse: 150 70% 40%;
   }
 
   .dark {
-    /* Page surface = deep navy */
-    --background: 220 85% 10%;         /* #00194d approx */
-    --foreground: 210 40% 97%;
+    /* Level 0: Dark Page Surface (#061526 root) */
+    --background: 213 73% 9%;          /* #061526 */
+    --foreground: 216 20% 97%;         /* #F5F7FA */
 
-    /* Cards = slightly lighter navy */
-    --card: 220 80% 15%;               /* #001E60-ish */
-    --card-foreground: 210 40% 97%;
+    /* Level 2: Deep Navy Industrial Cards (#071B2D) */
+    --card: 210 73% 10%;              /* #071B2D */
+    --card-foreground: 216 20% 97%;
 
-    --popover: 220 80% 15%;
-    --popover-foreground: 210 40% 97%;
+    /* Level 3: Nested Industrial Panels (#0A2340) */
+    --card-subtle: 212 73% 15%;        /* #0A2340 */
 
-    /* Primary = IndianOil Orange */
-    --primary: 27 90% 54%;
+    /* Popover */
+    --popover: 210 73% 10%;
+    --popover-foreground: 216 20% 97%;
+
+    /* Primary = Brand Orange #FF7A18 */
+    --primary: 25 100% 55%;
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 28 100% 57%;
 
-    --secondary: 215 60% 20%;
-    --secondary-foreground: 210 40% 97%;
+    /* Secondary = Dark surface accent (#0B2D4A) */
+    --secondary: 207 74% 17%;
+    --secondary-foreground: 216 20% 97%;
 
-    --muted: 215 60% 18%;
-    --muted-foreground: 215 20% 65%;
+    /* Muted Text & Backgrounds (#CBD5E1 & #0B2D4A) */
+    --muted: 207 74% 17%;              /* #0B2D4A */
+    --muted-foreground: 215 25% 75%;   /* #CBD5E1 - High Contrast Slate */
 
-    /* Accent = lighter blue in dark mode */
-    --accent: 215 76% 58%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent = Cyan / Teal #22D3EE / #14B8A6 */
+    --accent: 189 94% 53%;
+    --accent-foreground: 213 73% 9%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    /* Destructive = Red #EF4444 */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 215 50% 22%;
-    --input: 215 50% 22%;
-    --ring: 27 90% 54%;
+    /* Borders & Level 4 Inputs (#1E3A5F & #0A2340) */
+    --border: 214 52% 25%;             /* #1E3A5F */
+    --border-subtle: 214 52% 18%;      /* #12253E */
+    --input: 212 73% 15%;              /* #0A2340 */
+    --ring: 25 100% 55%;
+
+    /* Semantic status colors (dark mode) */
+    --status-extracted: 258 90% 70%;
+    --status-matched: 173 80% 40%;     /* #14B8A6 */
+    --status-unmatched: 28 100% 57%;   /* #FF8A25 */
+    --status-review: 28 100% 57%;      /* #FF8A25 */
+    --status-validated: 189 94% 53%;   /* #22D3EE */
+    --status-approved: 160 84% 45%;    /* #10B981 */
+    --status-rejected: 0 84% 60%;      /* #EF4444 */
+    --status-hold: 215 20% 65%;
+    --status-warning: 28 100% 57%;
+    --status-error: 0 84% 60%;
+    --status-corroborates: 173 80% 40%;
+    --status-contradicts: 0 84% 60%;
+    --color-ai: 189 94% 53%;           /* #22D3EE */
+
+    /* Provenance states */
+    --prov-ai: 189 94% 53%;
+    --prov-schedule: 173 80% 40%;
+    --prov-engineer: 200 95% 55%;
+    --prov-supervisor: 25 100% 55%;
+
+    /* Discipline colors */
+    --disc-civil: 25 100% 58%;
+    --disc-piping: 189 94% 53%;
+    --disc-equip: 173 80% 45%;
+    --disc-elec: 43 96% 55%;
+    --disc-inst: 270 70% 68%;
+    --disc-hse: 150 70% 50%;
   }
 }
 
@@ -101,7 +175,7 @@
   }
 
   body {
-    @apply bg-[#E8F4FD] dark:bg-[#00194d] text-slate-900 dark:text-slate-100 font-sans antialiased transition-colors duration-200;
+    @apply bg-background text-foreground font-sans antialiased min-h-screen transition-colors duration-200;
     font-family: 'Inter', sans-serif;
   }
 }
@@ -111,11 +185,42 @@
     font-family: 'IBM Plex Mono', monospace;
   }
 
-  /* IndianOil brand utility classes */
-  .brand-orange { color: #F47920; }
-  .brand-navy   { color: #003087; }
-  .brand-blue   { color: #1565C0; }
-  .bg-brand-orange { background-color: #F47920; }
-  .bg-brand-navy   { background-color: #003087; }
-  .bg-brand-blue   { background-color: #1565C0; }
+  /* Setu AI Industrial Brand Utilities */
+  .brand-orange { color: #FF7A18; }
+  .brand-navy   { color: #071B2D; }
+  .brand-cyan   { color: #22D3EE; }
+  .brand-teal   { color: #14B8A6; }
+
+  .bg-brand-orange { background-color: #FF7A18; }
+  .bg-brand-navy   { background-color: #071B2D; }
+  .bg-brand-cyan   { background-color: #22D3EE; }
+  .bg-brand-teal   { background-color: #14B8A6; }
+
+  /* Industrial Gradient System Utilities */
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, #FF7A18 0%, #FF941F 100%);
+  }
+  .bg-gradient-primary-hover {
+    background: linear-gradient(135deg, #E06810 0%, #FF7A18 100%);
+  }
+  .bg-gradient-cyan {
+    background: linear-gradient(135deg, #14B8A6 0%, #22D3EE 100%);
+  }
+  .bg-gradient-navy {
+    background: linear-gradient(180deg, #061526 0%, #071B2D 50%, #0A2340 100%);
+  }
+  .bg-gradient-card-dark {
+    background: linear-gradient(180deg, #071B2D 0%, #0A2340 100%);
+  }
+
+  /* Industrial Depth & Glow Shadow Utilities */
+  .shadow-industrial {
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(30, 58, 95, 0.6);
+  }
+  .shadow-orange-glow {
+    box-shadow: 0 4px 20px -2px rgba(255, 122, 24, 0.35);
+  }
+  .shadow-cyan-glow {
+    box-shadow: 0 4px 20px -2px rgba(34, 211, 238, 0.25);
+  }
 }

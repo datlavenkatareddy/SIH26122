@@ -80,6 +80,17 @@ def create_test_db() -> SQLitePsycopgAdapter:
     )
     conn.execute(
         """
+        CREATE TABLE claim_activity_splits (
+            split_id TEXT PRIMARY KEY,
+            event_id TEXT NOT NULL,
+            activity_id TEXT NOT NULL,
+            split_basis TEXT,
+            split_pct REAL NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE approved_actuals (
             actual_id TEXT PRIMARY KEY,
             decision_id TEXT NOT NULL,

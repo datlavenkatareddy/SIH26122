@@ -4,6 +4,7 @@ from datetime import date
 from typing import Any, Optional, Union
 
 from backend.shared.db import get_connection
+from backend.shared.schemas import ExecutionState
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,59 @@ def get_approved_pct(
     return float(actual["actual_pct_complete"] or 0.0)
 
 
+def get_execution_state(
+    activity: Optional[Any] = None,
+    approved_actual: Optional[Any] = None,
+    *,
+    actual_pct_complete: Optional[float] = None,
+    actual_start: Optional[Any] = None,
+) -> str:
+    """
+    Canonical execution-state interpretation for SIH26122 (Phase 1C Rule E).
+
+    Priority:
+        1. actual_pct_complete >= 100 -> COMPLETED (precedes actual_start)
+        2. actual_start IS NOT NULL   -> IN_PROGRESS
+        3. else                       -> NOT_STARTED
+
+    Direct keyword arguments take precedence over attributes extracted from
+    `approved_actual` or `activity`.
+    """
+    pct = actual_pct_complete
+    start = actual_start
+
+    # If not supplied as direct keyword arguments, inspect approved_actual then activity
+    if pct is None or start is None:
+        for source in (approved_actual, activity):
+            if source is None:
+                continue
+            if isinstance(source, dict):
+                if pct is None:
+                    pct = source.get("actual_pct_complete")
+                if start is None:
+                    start = source.get("actual_start")
+            else:
+                if pct is None:
+                    pct = getattr(source, "actual_pct_complete", None)
+                if start is None:
+                    start = getattr(source, "actual_start", None)
+
+    # 1. actual_pct_complete >= 100 -> COMPLETED (takes precedence over actual_start)
+    if pct is not None:
+        try:
+            if float(pct) >= 100.0:
+                return ExecutionState.COMPLETED.value
+        except (ValueError, TypeError):
+            pass
+
+    # 2. actual_start IS NOT NULL -> IN_PROGRESS
+    if start is not None and str(start).strip() != "":
+        return ExecutionState.IN_PROGRESS.value
+
+    # 3. else -> NOT_STARTED
+    return ExecutionState.NOT_STARTED.value
+
+
 def _dispatch_adapters(actual: dict) -> dict:
     """
     Phase 1 adapter boundary hook.
@@ -70,6 +124,35 @@ def _dispatch_adapters(actual: dict) -> dict:
         "csv_export": "not_implemented_phase1",
         "p6_rest": "not_implemented_phase1",
     }
+
+
+def approved_split_quantity(conn: Any, schedule_id: Optional[str], activity_id: str) -> float:
+    """
+    Approved incremental quantity contributed to `activity_id` by WBS-split
+    (decomposed) claims: for each split claim whose LATEST decision is
+    APPROVE/EDIT, COALESCE(approved_qty, claimed_quantity) x split_pct.
+    Source-decision based like every other quantity recalculation -- never a
+    running total.
+    """
+    row = conn.execute(
+        """
+        SELECT COALESCE(SUM(COALESCE(pd.approved_qty, ee.claimed_quantity) * s.split_pct), 0.0) AS qty
+        FROM execution_events ee
+        JOIN planner_decisions pd ON pd.event_id = ee.event_id
+        JOIN claim_activity_splits s ON s.event_id = ee.event_id AND s.activity_id = %s
+        WHERE (CAST(%s AS TEXT) IS NULL OR ee.schedule_id = %s)
+          AND ee.claim_mode = 'INCREMENTAL_QUANTITY'
+          AND pd.action IN ('APPROVE', 'EDIT')
+          AND pd.decision_id = (
+            SELECT pd2.decision_id FROM planner_decisions pd2
+            WHERE pd2.event_id = ee.event_id
+            ORDER BY pd2.decided_at DESC, pd2.decision_id DESC
+            LIMIT 1
+          )
+        """,
+        (activity_id, schedule_id, schedule_id),
+    ).fetchone()
+    return float(row["qty"]) if row and row["qty"] is not None else 0.0
 
 
 def _execute_upsert(
@@ -98,8 +181,14 @@ def _execute_upsert(
     pd_approved_pct = dec_row["approved_pct"] if dec_row else None
     pd_approved_qty = dec_row["approved_qty"] if dec_row else None
 
+    # WBS split child (Feature 30): the claim is decomposed, so the caller names the child
+    # activity and its share. The decision's own selected_activity_id is just the primary child.
+    split_pct = fields.get("split_pct")
+    if split_pct is not None:
+        split_pct = float(split_pct)
+
     # Authority: After planner review, planner_decisions.selected_activity_id is authoritative
-    if pd_selected_activity:
+    if pd_selected_activity and split_pct is None:
         activity_id = pd_selected_activity
 
     action = fields.get("action") or pd_action
@@ -190,6 +279,8 @@ def _execute_upsert(
 
         if pct_candidate is not None:
             final_pct = float(pct_candidate)
+            if split_pct is not None:
+                final_pct = final_pct * split_pct  # contribution = claim value x split_pct
             final_pct = max(0.0, min(100.0, final_pct))
         else:
             final_pct = (
@@ -221,6 +312,9 @@ def _execute_upsert(
                 ORDER BY pd2.decided_at DESC, pd2.decision_id DESC
                 LIMIT 1
               )
+              AND NOT EXISTS (
+                SELECT 1 FROM claim_activity_splits s WHERE s.event_id = ee.event_id
+              )
             """,
             (schedule_id, activity_id),
         ).fetchone()
@@ -230,6 +324,9 @@ def _execute_upsert(
             if recalc_row and recalc_row["total_qty"] is not None
             else 0.0
         )
+        # Split claims are excluded above (their decision names only the primary
+        # child); add every split child's share of every such approved claim.
+        recalculated_qty += approved_split_quantity(conn, schedule_id, activity_id)
 
         if recalculated_qty > 0.0:
             final_quantity = recalculated_qty
@@ -338,6 +435,24 @@ def _execute_upsert(
                 final_quantity,
             ),
         ).fetchone()
+
+    # V7 ownership stamp: the approved actual belongs to the activity's project/stage. Only executed
+    # when the caller (the project-scoped decisions router) supplies it; V6 callers are unchanged.
+    if saved_row is not None and fields.get("project_id") is not None:
+        stamped = conn.execute(
+            """
+            UPDATE approved_actuals
+            SET project_id = COALESCE(project_id, %s), stage_id = COALESCE(stage_id, %s)
+            WHERE schedule_id = %s AND activity_id = %s
+            RETURNING project_id, stage_id
+            """,
+            (fields["project_id"], fields.get("stage_id"), schedule_id, activity_id),
+        ).fetchone()
+        result = dict(saved_row)
+        if stamped:
+            result["project_id"] = stamped["project_id"]
+            result["stage_id"] = stamped["stage_id"]
+        return result
 
     result = dict(saved_row) if saved_row else None
     return result

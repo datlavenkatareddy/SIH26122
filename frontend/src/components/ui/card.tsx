@@ -4,12 +4,13 @@ import { cn } from "@/lib/utils"
 
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
+  React.HTMLAttributes<HTMLDivElement> & { subtle?: boolean }
+>(({ className, subtle, ...props }, ref) => (
   <div
     ref={ref}
     className={cn(
-      "rounded-xl border bg-card text-card-foreground shadow",
+      "rounded-xl border border-border text-card-foreground shadow-xs transition-colors backdrop-blur-md",
+      subtle ? "bg-card-subtle/85 border-border-subtle" : "bg-card/92 dark:bg-card/85",
       className
     )}
     {...props}

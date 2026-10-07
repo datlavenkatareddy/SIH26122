@@ -4,6 +4,7 @@ from typing import Any
 from fastapi.testclient import TestClient
 
 from backend.main import app
+from tests.v7ctx import PROJECT_ID, act_as, fake_schedules
 from backend.routers.dashboard import query_delay_reason_aggregates
 from backend.shared.auth import UserProfile, get_current_user
 
@@ -282,16 +283,10 @@ def test_deterministic_ordering():
 
 def test_supervisor_access_succeeds(monkeypatch):
     client = TestClient(app)
-    supervisor = UserProfile(
-        id="22222222-2222-2222-2222-222222222222",
-        full_name="Bob Supervisor",
-        role="SUPERVISOR",
-    )
-    app.dependency_overrides[get_current_user] = lambda: supervisor
 
     monkeypatch.setattr(
         "backend.routers.dashboard.query_delay_reason_aggregates",
-        lambda conn=None: {
+        lambda conn=None, schedule_id=None: {
             "delay_reasons": [
                 {"delay_reason": "MATERIAL", "count": 2},
                 {"delay_reason": "WEATHER", "count": 1},
@@ -300,17 +295,12 @@ def test_supervisor_access_succeeds(monkeypatch):
         },
     )
 
-    try:
-        resp = client.get(
-            "/api/v1/dashboard/delay-reasons",
-            headers={"Authorization": "Bearer mocked-sup-token"},
-        )
-        assert resp.status_code == 200
-        body = resp.json()
-        assert body["total_approved_delay_claims"] == 3
-        assert len(body["delay_reasons"]) == 2
-    finally:
-        app.dependency_overrides.clear()
+    with act_as("SUPERVISOR"):
+        resp = client.get("/api/v1/dashboard/delay-reasons", headers={"Authorization": "Bearer mocked-sup-token"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total_approved_delay_claims"] == 3
+    assert len(body["delay_reasons"]) == 2
 
 
 # =========================================================================
@@ -318,22 +308,12 @@ def test_supervisor_access_succeeds(monkeypatch):
 # =========================================================================
 
 def test_site_engineer_forbidden():
+    """A SITE_ENGINEER (no REVIEW_CLAIM permission in the project) cannot read review dashboards."""
     client = TestClient(app)
-    engineer = UserProfile(
-        id="11111111-1111-1111-1111-111111111111",
-        full_name="Alice Engineer",
-        role="SITE_ENGINEER",
-    )
-    app.dependency_overrides[get_current_user] = lambda: engineer
-
-    try:
-        resp = client.get(
-            "/api/v1/dashboard/delay-reasons",
-            headers={"Authorization": "Bearer mocked-eng-token"},
-        )
-        assert resp.status_code == 403
-    finally:
-        app.dependency_overrides.clear()
+    with act_as("SITE_ENGINEER"):
+        resp = client.get("/api/v1/dashboard/delay-reasons", headers={"Authorization": "Bearer mocked-eng-token"})
+    assert resp.status_code == 403
+    assert resp.json()["detail"]["error_code"] == "PERMISSION_DENIED"
 
 
 # =========================================================================
@@ -367,3 +347,65 @@ def test_response_shape_matches_contract():
     assert isinstance(data["total_approved_delay_claims"], int)
     assert data["total_approved_delay_claims"] == 0
     assert data["delay_reasons"] == []
+
+
+# =========================================================================
+# 13. Active-schedule resolution (ISS-02 / ISS-05): no query param resolves
+#     the one canonical active schedule; an explicit schedule_id is
+#     validated; neither ever silently falls back to a stale/guessed id.
+# =========================================================================
+
+_STUB_SUMMARY = {
+    "total_claims": 0, "pending_review": 0, "actuals": 0, "conflicts": 0,
+    "discipline_breakdown": [], "claims_trend_pct": None,
+}
+
+
+def test_summary_requires_explicit_schedule_no_active_fallback():
+    """No schedule_id -> 400 INVALID_SCHEDULE_CONTEXT. There is no 'active schedule' fallback any more."""
+    client = TestClient(app)
+    with act_as("SUPERVISOR", schedule_id=None):
+        resp = client.get("/api/v1/dashboard/summary", headers={"Authorization": "Bearer t"})
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["error_code"] == "INVALID_SCHEDULE_CONTEXT"
+
+
+def test_summary_404_for_unknown_explicit_schedule_id(monkeypatch):
+    """An explicit but nonexistent schedule_id must 404, never silently fall back to another schedule."""
+    client = TestClient(app)
+    fake_schedules(monkeypatch, {})
+    with act_as("SUPERVISOR", schedule_id=None):
+        resp = client.get("/api/v1/dashboard/summary?schedule_id=sched-OIL-2026", headers={"Authorization": "Bearer t"})
+    assert resp.status_code == 404
+
+
+def test_summary_rejects_a_schedule_of_another_project(monkeypatch):
+    client = TestClient(app)
+    fake_schedules(monkeypatch, {"SCHED_OTHER": "99999999-9999-4999-8999-999999999999", "SCHED_LEGACY": None})
+    with act_as("SUPERVISOR", schedule_id=None):
+        for sid in ("SCHED_OTHER", "SCHED_LEGACY"):
+            resp = client.get(f"/api/v1/dashboard/summary?schedule_id={sid}", headers={"Authorization": "Bearer t"})
+            assert resp.status_code == 403, sid
+            assert resp.json()["detail"]["error_code"] == "SCHEDULE_ACCESS_DENIED"
+
+
+def test_summary_uses_valid_explicit_schedule_id(monkeypatch):
+    client = TestClient(app)
+    captured = {}
+    fake_schedules(monkeypatch, {"SCHED_REAL": str(PROJECT_ID)})
+    monkeypatch.setattr(
+        "backend.routers.dashboard.query_dashboard_summary",
+        lambda conn=None, schedule_id=None: captured.setdefault("schedule_id", schedule_id) and _STUB_SUMMARY,
+    )
+    with act_as("SUPERVISOR", schedule_id=None):
+        resp = client.get("/api/v1/dashboard/summary?schedule_id=SCHED_REAL", headers={"Authorization": "Bearer t"})
+    assert resp.status_code == 200
+    assert captured["schedule_id"] == "SCHED_REAL"
+
+
+def test_summary_conflicting_schedule_headers_rejected(monkeypatch):
+    client = TestClient(app)
+    fake_schedules(monkeypatch, {"A": str(PROJECT_ID), "B": str(PROJECT_ID)})
+    with act_as("SUPERVISOR", schedule_id=None):
+        resp = client.get("/api/v1/dashboard/summary?schedule_id=A", headers={"X-Schedule-ID": "B"})
+    assert resp.status_code == 400

@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SETUAI — Technical Approach & System Network Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #080c14;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(56, 189, 248, 0.2);
+      --stage1-blue: #0284c7;
+      --stage2-indigo: #4f46e5;
+      --stage3-purple: #7c3aed;
+      --stage4-amber: #d97706;
+      --stage5-rose: #e11d48;
+      --stage6-emerald: #059669;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --glow-blue: rgba(56, 189, 248, 0.25);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem;
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 90% 20%, rgba(124, 58, 237, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 50% 90%, rgba(5, 150, 105, 0.08) 0%, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    .slide-wrapper {
+      width: 100%;
+      max-width: 1600px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* Presentation Slide Frame */
+    .slide-container {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 2rem 2.5rem;
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), 0 0 50px rgba(56, 189, 248, 0.08);
+      backdrop-filter: blur(16px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Slide Header */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      padding-bottom: 1.25rem;
+      gap: 1rem;
+    }
+
+    .badge-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-radius: 9999px;
+    }
+
+    .badge-sub {
+      background: rgba(124, 58, 237, 0.12);
+      border-color: rgba(124, 58, 237, 0.35);
+      color: #c084fc;
+    }
+
+    h1 {
+      font-size: 2.1rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 10%, #cbd5e1 60%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.2;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-top: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    p.subtitle span.arrow {
+      color: #38bdf8;
+      font-weight: bold;
+    }
+
+    .controls {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #f1f5f9;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: #38bdf8;
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+      border-color: #38bdf8;
+      color: #ffffff;
+      box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+    }
+
+    /* Tabs Bar */
+    .tabs-bar {
+      display: flex;
+      gap: 0.5rem;
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 0.35rem;
+      border-radius: 12px;
+      margin-bottom: 1.25rem;
+      width: fit-content;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.5rem 1.1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tab-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      color: #38bdf8;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Tab Panes */
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    /* =========================================================================
+       TAB 1: HIGH-RES INTERACTIVE NETWORK CANVAS (16:9 SLIDE LAYOUT)
+       ========================================================================= */
+    .network-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 1.1rem;
+      position: relative;
+    }
+
+    @media (max-width: 1200px) {
+      .network-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .network-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .stage-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      position: relative;
+      transition: all 0.25s ease;
+      backdrop-filter: blur(8px);
+    }
+
+    .stage-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .stage-card.s1 { border-top: 3px solid var(--stage1-blue); }
+    .stage-card.s2 { border-top: 3px solid var(--stage2-indigo); }
+    .stage-card.s3 { border-top: 3px solid var(--stage3-purple); }
+    .stage-card.s4 { border-top: 3px solid var(--stage4-amber); }
+    .stage-card.s5 { border-top: 3px solid var(--stage5-rose); }
+    .stage-card.s6 { border-top: 3px solid var(--stage6-emerald); }
+
+    .stage-card.s1:hover { border-color: var(--stage1-blue); }
+    .stage-card.s2:hover { border-color: var(--stage2-indigo); }
+    .stage-card.s3:hover { border-color: var(--stage3-purple); }
+    .stage-card.s4:hover { border-color: var(--stage4-amber); }
+    .stage-card.s5:hover { border-color: var(--stage5-rose); }
+    .stage-card.s6:hover { border-color: var(--stage6-emerald); }
+
+    .stage-header {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .stage-num {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .s1 .stage-num { color: #38bdf8; }
+    .s2 .stage-num { color: #818cf8; }
+    .s3 .stage-num { color: #c084fc; }
+    .s4 .stage-num { color: #fbbf24; }
+    .s5 .stage-num { color: #f87171; }
+    .s6 .stage-num { color: #34d399; }
+
+    .stage-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.3;
+    }
+
+    .stage-role {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .node-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      flex-grow: 1;
+    }
+
+    .network-node {
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 9px;
+      padding: 0.7rem 0.8rem;
+      font-size: 0.78rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .network-node:hover {
+      background: rgba(30, 41, 59, 0.8);
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: scale(1.02);
+    }
+
+    .node-title {
+      font-weight: 700;
+      color: #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .node-desc {
+      font-size: 0.71rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .node-usp {
+      margin-top: 0.4rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+    }
+
+    .usp-blue { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .usp-purple { background: rgba(192, 132, 252, 0.15); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.3); }
+    .usp-amber { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+    .usp-rose { background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); }
+    .usp-emerald { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+
+    /* Flow Connectors Bar */
+    .flow-bridge-bar {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      margin: 0.75rem 0;
+      padding: 0 2rem;
+    }
+
+    .bridge-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      color: #38bdf8;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .bridge-line {
+      height: 2px;
+      flex-grow: 1;
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.2), #38bdf8, rgba(56, 189, 248, 0.2));
+      position: relative;
+    }
+
+    .bridge-line::after {
+      content: '▶';
+      position: absolute;
+      right: 0;
+      top: -6px;
+      font-size: 0.65rem;
+      color: #38bdf8;
+    }
+
+    /* Core Architectural Pillars Banner */
+    .innovations-panel {
+      margin-top: 1.5rem;
+      background: rgba(11, 15, 25, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 1.25rem 1.75rem;
+    }
+
+    .innovations-title {
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #38bdf8;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .innovations-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+
+    .innovation-box {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+    }
+
+    .innovation-box h4 {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .innovation-box p {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .innovation-box code {
+      font-family: 'JetBrains Mono', monospace;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+      padding: 0.1rem 0.3rem;
+      border-radius: 3px;
+      font-size: 0.7rem;
+    }
+
+    /* =========================================================================
+       TAB 2: MERMAID FLOWCHART VIEWPORT (WITH PAN/ZOOM CONTROLS)
+       ========================================================================= */
+    .mermaid-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8rem;
+      padding: 0.5rem 1rem;
+      background: rgba(11, 15, 25, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+    }
+
+    .zoom-controls {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .zoom-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+
+    .zoom-btn:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: #38bdf8;
+    }
+
+    .diagram-viewport {
+      background: rgba(11, 15, 25, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 14px;
+      padding: 2rem 1.5rem;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      min-height: 520px;
+      position: relative;
+    }
+
+    .mermaid-wrapper {
+      transform-origin: top center;
+      transition: transform 0.2s ease-out;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .mermaid-wrapper svg {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+
+    /* =========================================================================
+       TAB 3: SPEC SHEET / CODE SPECIFICATION
+       ========================================================================= */
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      background: rgba(11, 15, 25, 0.6);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .spec-table th, .spec-table td {
+      padding: 0.85rem 1.25rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .spec-table th {
+      background: rgba(15, 23, 42, 0.9);
+      color: #38bdf8;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 0.74rem;
+    }
+
+    .spec-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .spec-table code {
+      font-family: 'JetBrains Mono', monospace;
+      color: #c084fc;
+      background: rgba(124, 58, 237, 0.12);
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.74rem;
+    }
+
+    /* Footer Legend */
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.85rem;
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .l-blue { background: #0284c7; box-shadow: 0 0 8px rgba(2, 132, 199, 0.5); }
+    .l-indigo { background: #4f46e5; box-shadow: 0 0 8px rgba(79, 70, 229, 0.5); }
+    .l-purple { background: #7c3aed; box-shadow: 0 0 8px rgba(124, 58, 237, 0.5); }
+    .l-amber { background: #d97706; box-shadow: 0 0 8px rgba(217, 119, 6, 0.5); }
+    .l-rose { background: #e11d48; box-shadow: 0 0 8px rgba(225, 29, 72, 0.5); }
+    .l-emerald { background: #059669; box-shadow: 0 0 8px rgba(5, 150, 105, 0.5); }
+
+    /* Print / Fullscreen Slide Mode */
+    @media print {
+      body {
+        background: #0b0f19 !important;
+        padding: 0 !important;
+      }
+      .controls, .tabs-bar, .mermaid-toolbar {
+        display: none !important;
+      }
+      .slide-container {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 1.5rem !important;
+      }
+    }
+
+    :fullscreen .slide-container {
+      max-width: 100vw;
+      min-height: 100vh;
+      border-radius: 0;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="slide-wrapper" id="slidePresentation">
+    <div class="slide-container">
+      
+      <!-- Slide Header -->
+      <div class="slide-header">
+        <div>
+          <div class="badge-row">
+            <span class="badge">Technical Approach & System Network</span>
+            <span class="badge badge-sub">SIH26122 • SETUAI</span>
+          </div>
+          <h1>SETUAI End-to-End Execution Intelligence Network</h1>
+          <p class="subtitle">
+            <span>Multimodal Field Reality</span>
+            <span class="arrow">→</span>
+            <span>Deterministic Verification</span>
+            <span class="arrow">→</span>
+            <span>Human-in-the-Loop Governance</span>
+            <span class="arrow">→</span>
+            <span>PMIS Reconciliation</span>
+          </p>
+        </div>
+
+        <div class="controls">
+          <button class="btn btn-primary" onclick="toggleFullscreen()">
+            <span>🖥️</span> Fullscreen Slide
+          </button>
+          <button class="btn" onclick="copyMermaidCode()">
+            <span>📋</span> Copy Mermaid Code
+          </button>
+          <button class="btn" onclick="window.print()">
+            <span>🖨️</span> Print / Save PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="tabs-bar">
+        <button class="tab-btn active" onclick="switchTab('canvas-tab')">
+          <span>🌟</span> Interactive Network Canvas (Slide View)
+        </button>
+        <button class="tab-btn" onclick="switchTab('mermaid-tab')">
+          <span>📊</span> Mermaid Architecture Graph
+        </button>
+        <button class="tab-btn" onclick="switchTab('specs-tab')">
+          <span>📋</span> Technical Spec Sheet & Algorithmic Rules
+        </button>
+      </div>
+
+      <!-- =========================================================================
+           TAB 1: HIGH-RES INTERACTIVE NETWORK CANVAS (SLIDE FORMAT)
+           ========================================================================= -->
+      <div id="canvas-tab" class="tab-pane active">
+        
+        <div class="network-grid">
+          
+          <!-- STAGE 1 -->
+          <div class="stage-card s1">
+            <div class="stage-header">
+              <span class="stage-num">STAGE 01</span>
+              <div class="stage-title">Multimodal Field Intake</div>
+              <div class="stage-role">Site Engineers & Supervisors</div>
+            </div>
+            <div class="node-stack">
+              <div class="network-node">
+                <div class="node-title">🎤 Voice Streaming</div>
+                <div class="node-desc">Continuous Web Speech API with interim auto-restart.</div>
+                <div class="node-usp usp-blue">Native Audio</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">📝 Trilingual Text</div>
+                <div class="node-desc">Direct notes in English, Hindi, and Telugu.</div>
+                <div class="node-usp usp-blue">Regional UX</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">📄 Measurement Docs</div>
+                <div class="node-desc">DPR, M-Book sheets in PDF, XLSX, and CSV.</div>
+                <div class="node-usp usp-blue">Tabular Batch</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">📷 Geotagged Photos</div>
+                <div class="node-desc">EXIF timestamp & GPS coordinates metadata extraction.</div>
+                <div class="node-usp usp-blue">Spatial Proof</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">📊 Primavera .xer</div>
+                <div class="node-desc">Schedule baseline import with WBS hierarchy.</div>
+                <div class="node-usp usp-blue">P6 Schema</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STAGE 2 -->
+          <div class="stage-card s2">
+            <div class="stage-header">
+              <span class="stage-num">STAGE 02</span>
+              <div class="stage-title">Extraction & Copilot</div>
+              <div class="stage-role">Deterministic Parsing + LLM</div>
+            </div>
+            <div class="node-stack">
+              <div class="network-node">
+                <div class="node-title">⚡ Tabular Parser</div>
+                <div class="node-desc">Zero-LLM deterministic path for CSV, XLSX, and structured PDFs.</div>
+                <div class="node-usp usp-purple">&lt;50ms Fast Path</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">🧠 Multilingual LLM</div>
+                <div class="node-desc">Groq LLaMA-3.3 / Gemini Flash extraction into JSON schema.</div>
+                <div class="node-usp usp-purple">Zero Hallucination</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">🏷️ Field Provenance</div>
+                <div class="node-desc">Tags every field with ai_inferred vs human_reported flags.</div>
+                <div class="node-usp usp-purple">Lineage Tracking</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">❓ Interactive Copilot</div>
+                <div class="node-desc">1-question localized loop for missing critical parameters.</div>
+                <div class="node-usp usp-purple">Bounded Loop</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STAGE 3 -->
+          <div class="stage-card s3">
+            <div class="stage-header">
+              <span class="stage-num">STAGE 03</span>
+              <div class="stage-title">Schedule Matching & WBS</div>
+              <div class="stage-role">Granularity Resolution Engine</div>
+            </div>
+            <div class="node-stack">
+              <div class="network-node">
+                <div class="node-title">📅 P6 Baseline Corpus</div>
+                <div class="node-desc">PostgreSQL indexed schedule activities and WBS trees.</div>
+                <div class="node-usp usp-purple">Single Source</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">🔍 4-Tier Match Cascade</div>
+                <div class="node-desc">Exact ID (1.00) → Exact Asset (0.80-0.95) → Hybrid FAISS + Fuzzy → Mismatch (&le;0.40).</div>
+                <div class="node-usp usp-purple">Deterministic Waterfall</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">🌐 Scope Gate</div>
+                <div class="node-desc">Detects if claimed work matches a leaf activity or summary scope.</div>
+                <div class="node-usp usp-purple">WBS Classification</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">⚖️ WBS Granularity Bridge</div>
+                <div class="node-desc">Water-fill headroom allocation across child sibling tasks.</div>
+                <div class="node-usp usp-purple">Water-Fill Algorithm</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STAGE 4 -->
+          <div class="stage-card s4">
+            <div class="stage-header">
+              <span class="stage-num">STAGE 04</span>
+              <div class="stage-title">Deterministic Verification</div>
+              <div class="stage-role">Zero-Trust Evidence Fusion</div>
+            </div>
+            <div class="node-stack">
+              <div class="network-node">
+                <div class="node-title">📐 Physical & Quantity</div>
+                <div class="node-desc">Checks for negative values, &gt;100% exceedance, and UOM consistency.</div>
+                <div class="node-usp usp-amber">Zero False Acceptance</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">📈 Directional Conflicts</div>
+                <div class="node-desc">Catches same-date discrepancies (&gt;10%) and regressions.</div>
+                <div class="node-usp usp-amber">Sequence Audit</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">📍 Spatial & Temporal</div>
+                <div class="node-desc">EXIF timestamp &le; 2 days; GPS site radius haversine validation.</div>
+                <div class="node-usp usp-amber">Anti-Spoofing</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">🔗 Cross-Channel Fusion</div>
+                <div class="node-desc">Corroborates claims across photos, DPR documents, and notes.</div>
+                <div class="node-usp usp-amber">Evidence Fused</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">🎯 Smart Priority Scorer</div>
+                <div class="node-desc">Dynamic rank: 0.35 Critical + 0.25 Float + 0.25 Error + 0.15 Aging.</div>
+                <div class="node-usp usp-amber">CPM-Weighted</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STAGE 5 -->
+          <div class="stage-card s5">
+            <div class="stage-header">
+              <span class="stage-num">STAGE 05</span>
+              <div class="stage-title">Human Governance</div>
+              <div class="stage-role">Supervisor Review & Audit</div>
+            </div>
+            <div class="node-stack">
+              <div class="network-node">
+                <div class="node-title">📋 Review Queue & Digest</div>
+                <div class="node-desc">Priority-sorted queue with 24-hr daily horizon digest.</div>
+                <div class="node-usp usp-rose">Triage Workflow</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">🛡️ Supervisor Decision Gate</div>
+                <div class="node-desc">Four atomic actions: APPROVE, EDIT (manual split), REJECT, HOLD.</div>
+                <div class="node-usp usp-rose">Human in Control</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">🔐 Tamper-Evident Audit</div>
+                <div class="node-desc">Every action recorded in a SHA-256 chained hash log.</div>
+                <div class="node-usp usp-rose">Cryptographic Integrity</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STAGE 6 -->
+          <div class="stage-card s6">
+            <div class="stage-header">
+              <span class="stage-num">STAGE 06</span>
+              <div class="stage-title">Canonical Reconciled PMIS</div>
+              <div class="stage-role">Intelligence & P6 Integration</div>
+            </div>
+            <div class="node-stack">
+              <div class="network-node">
+                <div class="node-title">✅ Canonical Approved Actuals</div>
+                <div class="node-desc">Strictly one authoritative actuals row per schedule activity.</div>
+                <div class="node-usp usp-emerald">Source of Truth</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">⏱️ CPM Simulation Engine</div>
+                <div class="node-desc">3-hop forward/backward float slip propagation on critical path.</div>
+                <div class="node-usp usp-emerald">Critical Path Method</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">🕸️ Ask Why Causal Graph</div>
+                <div class="node-desc">Visual dependency traversal to root-cause delays.</div>
+                <div class="node-usp usp-emerald">Causal Reasoning</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">📊 Operational KPIs</div>
+                <div class="node-desc">Forecast variance ratios, delay Pareto charts, and team velocity.</div>
+                <div class="node-usp usp-emerald">Executive Cockpit</div>
+              </div>
+              <div class="network-node">
+                <div class="node-title">🔌 PMIS Write-Back</div>
+                <div class="node-desc">RFC-4180 CSV export & Oracle Primavera P6 REST synchronization.</div>
+                <div class="node-usp usp-emerald">Two-Way Sync</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 4 Key Technical Differentiators Banner -->
+        <div class="innovations-panel">
+          <div class="innovations-title">
+            <span>⚡ Key Architectural Differentiators (Why SETUAI Wins Against Generic AI)</span>
+          </div>
+          <div class="innovations-grid">
+            <div class="innovation-box">
+              <h4>⚖️ WBS Granularity Bridge</h4>
+              <p>Site engineers report <code>"Pier Work Complete"</code>. SETUAI automatically uses <strong>Water-Fill Headroom Allocation</strong> to distribute progress across sibling tasks up to their 100% capacity without manual guesswork.</p>
+            </div>
+            <div class="innovation-box">
+              <h4>📈 Directional Conflict Filter</h4>
+              <p>Stops erroneous progress regressions (e.g. 80% → 60%) unless tagged with an accepted <code>REWORK</code> code. Flags same-date contractor vs supervisor discrepancies &gt;10% deterministically.</p>
+            </div>
+            <div class="innovation-box">
+              <h4>🎯 CPM-Aware Priority Scorer</h4>
+              <p>Sorts the supervisor review queue using <code>Score = 0.35(Critical) + 0.25(Float) + 0.25(Error) + 0.15(Age)</code>. Delays on critical path activities are pushed to the top instantly.</p>
+            </div>
+            <div class="innovation-box">
+              <h4>🔐 SHA-256 Tamper-Evident Chain</h4>
+              <p>Every review, split, and edit is committed with <code>Hash = SHA256(prev_hash + event_id + supervisor_id + timestamp + delta)</code>, creating a court-admissible audit trail.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- =========================================================================
+           TAB 2: MERMAID FLOWCHART (CLEAN VECTOR WITH ZOOM/PAN CONTROLS)
+           ========================================================================= -->
+      <div id="mermaid-tab" class="tab-pane">
+        
+        <div class="mermaid-toolbar">
+          <span style="font-size:0.8rem; color:var(--text-muted);">
+            Rendered with <strong>Mermaid v10</strong> • High-Definition Vector Flowchart
+          </span>
+          <div class="zoom-controls">
+            <button class="zoom-btn" onclick="zoomMermaid(1.15)" title="Zoom In">+</button>
+            <button class="zoom-btn" onclick="zoomMermaid(0.85)" title="Zoom Out">-</button>
+            <button class="zoom-btn" onclick="resetMermaidZoom()" title="Reset Zoom">↺</button>
+          </div>
+        </div>
+
+        <div class="diagram-viewport" id="mermaidViewport">
+          <div class="mermaid-wrapper" id="mermaidWrapper">
+            <div class="mermaid" id="mermaidGraph">
+flowchart TB
+    %% =========================================================================
+    %% STAGE 1: MULTIMODAL FIELD INTAKE
+    %% =========================================================================
+    subgraph S1 ["1. MULTIMODAL FIELD INTAKE (SITE REALITY)"]
+        IN_VOICE["🎤 Voice Input<br/>(Web Speech API)"]
+        IN_TXT["📝 Typed Field Notes<br/>(English / Hindi / Telugu)"]
+        IN_DOC["📄 Measurement Docs<br/>(DPR / M-Book: PDF, Excel, CSV)"]
+        IN_IMG["📷 Geotagged Photos<br/>(EXIF Timestamp & GPS)"]
+        IN_XER["📊 Native Schedules<br/>(Primavera .xer Baseline)"]
+    end
+
+    %% =========================================================================
+    %% STAGE 2: EXTRACTION, PROVENANCE & COPILOT
+    %% =========================================================================
+    subgraph S2 ["2. EXTRACTION, PROVENANCE & COPILOT GATE"]
+        EXT_TAB["⚡ Tabular Parser<br/>(Deterministic Zero-LLM)"]
+        EXT_LLM["🧠 Multilingual LLM<br/>(Structured Extraction)"]
+        PROV["🏷️ Field Provenance<br/>(AI-Inferred vs Human-Reported)"]
+        COPILOT{"❓ Interactive Copilot<br/>(1-Question Localized Loop)"}
+    end
+
+    %% =========================================================================
+    %% STAGE 3: RESOLUTION & WBS DECOMPOSITION
+    %% =========================================================================
+    subgraph S3 ["3. SCHEDULE MATCHING & WBS GRANULARITY"]
+        M_BASE[("📅 PostgreSQL Schedule Baseline<br/>(P6 Activities Corpus)")]
+        M_CASCADE["🔍 4-Tier Matching Cascade<br/>• Tier 1: Exact ID (1.00)<br/>• Tier 2: Exact Asset (0.80-0.95)<br/>• Tier 3: Hybrid FAISS + Fuzzy<br/>• Tier 4: Mismatch (&le;0.40)"]
+        WBS_GATE{"🌐 Scope Granularity Gate<br/>(Summary vs Leaf Activity)"}
+        WBS_SPLIT["⚖️ WBS Granularity Bridge<br/>(Water-Fill Headroom Allocation<br/>across Sibling Activities)"]
+    end
+
+    %% =========================================================================
+    %% STAGE 4: DETERMINISTIC VERIFICATION & FUSION
+    %% =========================================================================
+    subgraph S4 ["4. DETERMINISTIC VERIFICATION & EVIDENCE FUSION"]
+        V_PHYS["📐 Physical & Quantity Rules<br/>(Negative Check, &gt;100% Exceedance, UOM)"]
+        V_DIR["📈 Directional Conflict Engine<br/>(Same-Date Conflict, Regression Filter)"]
+        V_GEO["📍 Spatial & Temporal Audit<br/>(EXIF Date &le; 2 Days, Haversine GPS)"]
+        V_FUSE["🔗 Cross-Channel Evidence Fusion<br/>(Photo + Doc + Note Corroboration)"]
+        PRIORITY["🎯 Smart Priority Scorer<br/>(CPM Criticality + Float + Error Weights)"]
+    end
+
+    %% =========================================================================
+    %% STAGE 5: HUMAN GOVERNANCE & AUDIT COCKPIT
+    %% =========================================================================
+    subgraph S5 ["5. HUMAN GOVERNANCE & AUDIT COCKPIT"]
+        QUEUE["📋 Review Queue & Daily Horizon<br/>(Priority-Ranked Worklist)"]
+        DECISION{"🛡️ Supervisor Decision Gate<br/>• APPROVE<br/>• EDIT (Manual Split)<br/>• REJECT<br/>• HOLD"}
+        AUDIT[("🔐 Tamper-Evident Audit Chain<br/>(SHA-256 Chained Hash Log)")]
+    end
+
+    %% =========================================================================
+    %% STAGE 6: CANONICAL RECONCILIATION & INTELLIGENCE
+    %% =========================================================================
+    subgraph S6 ["6. CANONICAL ACTUALS & SCHEDULE INTELLIGENCE"]
+        ACTUALS[("✅ Canonical Approved Actuals<br/>(Strictly 1 Row / Activity Source of Truth)")]
+        CPM["⏱️ CPM Impact Simulation Engine<br/>(3-Hop Float Slip Propagation)"]
+        GRAPH["🕸️ Ask Why Causal Delay Graph<br/>(Root-Cause Dependency Trace)"]
+        DASH["📊 Operational KPIs & Analytics<br/>(Forecast Ratios & Delay Pareto)"]
+        SUMM["📜 AI Execution Summary<br/>(Deterministic Facts + Multi-Lingual)"]
+        EXP_CSV["📑 RFC-4180 PMIS CSV Export"]
+        EXP_P6["🔌 Primavera P6 REST Write-Back"]
+    end
+
+    %% =========================================================================
+    %% PIPELINE INTERCONNECTIONS
+    %% =========================================================================
+    IN_VOICE -->|"Raw Audio / Transcript"| EXT_LLM
+    IN_TXT -->|"Natural Language Notes"| EXT_LLM
+    IN_DOC -->|"Structured Tables"| EXT_TAB
+    IN_DOC -->|"Unstructured Content"| EXT_LLM
+    IN_IMG -->|"Metadata Verification"| V_GEO
+    IN_IMG -->|"Visual Evidence"| V_FUSE
+    IN_XER -->|"Baseline Ingestion"| M_BASE
+
+    EXT_TAB -->|"Structured Fields"| PROV
+    EXT_LLM -->|"Extracted Claim & Confidence"| PROV
+    PROV -->|"Provenance-Tagged Draft"| COPILOT
+
+    COPILOT -->|"Ambiguous / Missing Details"| IN_TXT
+    COPILOT -->|"Complete & Confident Claim"| M_CASCADE
+
+    M_BASE -.->|"Activity Metadata Corpus"| M_CASCADE
+    M_CASCADE -->|"Matched Schedule Node"| WBS_GATE
+
+    WBS_GATE -->|"Broad Scope / Summary Claim"| WBS_SPLIT
+    WBS_GATE -->|"Direct Leaf Activity Claim"| V_PHYS
+    WBS_SPLIT -->|"Allocated Sibling Claims"| V_PHYS
+
+    V_PHYS -->|"Quantity Passed"| V_DIR
+    V_DIR -->|"Sequence Validated"| V_GEO
+    V_GEO -->|"Site-Verified"| V_FUSE
+    V_FUSE -->|"Corroborated Score"| PRIORITY
+
+    PRIORITY -->|"Ranked Claims"| QUEUE
+    QUEUE -->|"Inspection View"| DECISION
+
+    DECISION -->|"Approved / Edited Actuals"| ACTUALS
+    DECISION -->|"On Hold for Site Info"| QUEUE
+    DECISION -->|"Terminal Rejection"| AUDIT
+    DECISION -.->|"Cryptographic Event Stamp"| AUDIT
+
+    ACTUALS ==>|"Authoritative Progress"| CPM
+    ACTUALS ==>|"Historical Variance"| GRAPH
+    ACTUALS ==>|"Live Progress Metrics"| DASH
+    ACTUALS ==>|"Approved Milestones"| SUMM
+    ACTUALS ==>|"RFC-4180 Data"| EXP_CSV
+    ACTUALS ==>|"Post-Commit Push"| EXP_P6
+
+    CPM -.->|"Float Slip & Critical Drift"| DASH
+    CPM -.->|"Delay Cascades"| GRAPH
+
+    %% =========================================================================
+    %% COLOR & STYLE DEFINITIONS
+    %% =========================================================================
+    classDef intakeStyle fill:#0369a1,stroke:#38bdf8,stroke-width:2px,color:#ffffff;
+    classDef extractStyle fill:#4338ca,stroke:#818cf8,stroke-width:2px,color:#ffffff;
+    classDef matchStyle fill:#6d28d9,stroke:#c084fc,stroke-width:2px,color:#ffffff;
+    classDef checkStyle fill:#b45309,stroke:#fbbf24,stroke-width:2px,color:#ffffff;
+    classDef govStyle fill:#b91c1c,stroke:#f87171,stroke-width:2px,color:#ffffff;
+    classDef actualStyle fill:#047857,stroke:#34d399,stroke-width:2px,color:#ffffff;
+    classDef intelStyle fill:#0e7490,stroke:#22d3ee,stroke-width:2px,color:#ffffff;
+
+    class IN_VOICE,IN_TXT,IN_DOC,IN_IMG,IN_XER intakeStyle;
+    class EXT_TAB,EXT_LLM,PROV,COPILOT extractStyle;
+    class M_BASE,M_CASCADE,WBS_GATE,WBS_SPLIT matchStyle;
+    class V_PHYS,V_DIR,V_GEO,V_FUSE,PRIORITY checkStyle;
+    class QUEUE,DECISION,AUDIT govStyle;
+    class ACTUALS actualStyle;
+    class CPM,GRAPH,DASH,SUMM,EXP_CSV,EXP_P6 intelStyle;
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- =========================================================================
+           TAB 3: SPEC SHEET / CODE REFERENCE
+           ========================================================================= -->
+      <div id="specs-tab" class="tab-pane">
+        <table class="spec-table">
+          <thead>
+            <tr>
+              <th>Architecture Stage</th>
+              <th>Primary Technical Mechanism</th>
+              <th>Deterministic Boundary / Formula</th>
+              <th>Database / Protocol Target</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Multimodal Intake</strong></td>
+              <td>Web Speech API streaming + Multipart upload + EXIF extractor</td>
+              <td>Interim voice auto-restart; GPS extraction via Piexifjs</td>
+              <td><code>FormData</code> multipart / IndexedDB buffer</td>
+            </tr>
+            <tr>
+              <td><strong>2. Extraction & Copilot</strong></td>
+              <td>Dual-Path: Tabular CSV/XLSX Regex + Groq LLaMA-3.3 JSON Mode</td>
+              <td>1-question localized loop: max 1 round trip if <code>confidence &lt; 0.70</code></td>
+              <td><code>ClaimDraft</code> Pydantic model with provenance tags</td>
+            </tr>
+            <tr>
+              <td><strong>3. Schedule Matching</strong></td>
+              <td>4-Tier Deterministic Waterfall + FAISS / rapidfuzz</td>
+              <td><code>Exact ID (1.00) &gt; Exact Asset (0.80) &gt; Hybrid FAISS (&gt;0.40)</code></td>
+              <td><code>activities</code> table (PostgreSQL / SQLite)</td>
+            </tr>
+            <tr>
+              <td><strong>4. WBS Granularity Bridge</strong></td>
+              <td>Water-fill headroom allocation across leaf activities</td>
+              <td><code>Alloc_i = min(RemainingHeadroom_i, UnallocatedClaim)</code></td>
+              <td><code>wbs_splits</code> relational ledger</td>
+            </tr>
+            <tr>
+              <td><strong>5. Verification Cascade</strong></td>
+              <td>4 Rule Engines: Physical, Directional, Spatial, Evidence Fusion</td>
+              <td>Disagreement &gt;10% flagged; Δt &le; 2 days; GPS site radius</td>
+              <td><code>VerificationResult</code> with structured violation codes</td>
+            </tr>
+            <tr>
+              <td><strong>6. Human Governance</strong></td>
+              <td>Priority-Ranked Review Queue + Daily Horizon Digest</td>
+              <td><code>Score = 0.35(Crit) + 0.25(Float) + 0.25(Error) + 0.15(Age)</code></td>
+              <td><code>supervisor_decisions</code> table</td>
+            </tr>
+            <tr>
+              <td><strong>7. Tamper-Evident Chain</strong></td>
+              <td>Cryptographic event ledger with recursive hashing</td>
+              <td><code>SHA256(prev_hash + event_id + supervisor_id + timestamp + delta)</code></td>
+              <td><code>audit_hash_chain</code> append-only table</td>
+            </tr>
+            <tr>
+              <td><strong>8. Reconciliation & PMIS</strong></td>
+              <td>Single canonical actuals record + 3-hop CPM simulation</td>
+              <td>Strictly 1 approved row per activity; non-blocking P6 REST sync</td>
+              <td><code>approved_actuals</code> & RFC-4180 CSV export</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Slide Footer Legend -->
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot l-blue"></div> 1. Multimodal Field Intake</div>
+        <div class="legend-item"><div class="legend-dot l-indigo"></div> 2. Extraction & Clarification Gate</div>
+        <div class="legend-item"><div class="legend-dot l-purple"></div> 3. Schedule Matching & WBS Granularity</div>
+        <div class="legend-item"><div class="legend-dot l-amber"></div> 4. Deterministic Verification & Fusion</div>
+        <div class="legend-item"><div class="legend-dot l-rose"></div> 5. Human Governance & Audit Cockpit</div>
+        <div class="legend-item"><div class="legend-dot l-emerald"></div> 6. Canonical Actuals & Schedule PMIS</div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Tab switching logic
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      const targetPane = document.getElementById(tabId);
+      if (targetPane) targetPane.classList.add('active');
+      
+      // Match active button
+      const buttons = document.querySelectorAll('.tab-btn');
+      if (tabId === 'canvas-tab') buttons[0].classList.add('active');
+      if (tabId === 'mermaid-tab') buttons[1].classList.add('active');
+      if (tabId === 'specs-tab') buttons[2].classList.add('active');
+    }
+
+    // Fullscreen presentation toggle
+    function toggleFullscreen() {
+      const elem = document.getElementById('slidePresentation');
+      if (!document.fullscreenElement) {
+        elem.requestFullscreen().catch(err => {
+          alert(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    // Zoom Mermaid diagram
+    let currentZoom = 1.0;
+    function zoomMermaid(factor) {
+      currentZoom *= factor;
+      const wrapper = document.getElementById('mermaidWrapper');
+      if (wrapper) wrapper.style.transform = `scale(${currentZoom})`;
+    }
+
+    function resetMermaidZoom() {
+      currentZoom = 1.0;
+      const wrapper = document.getElementById('mermaidWrapper');
+      if (wrapper) wrapper.style.transform = 'scale(1)';
+    }
+
+    // Copy Mermaid code
+    function copyMermaidCode() {
+      const codeElement = document.getElementById('mermaidGraph');
+      if (!codeElement) return;
+      
+      // Extract original text before Mermaid rendering or copy raw syntax
+      const rawCode = `flowchart TB
+    subgraph S1 ["1. MULTIMODAL FIELD INTAKE (SITE REALITY)"]
+        IN_VOICE["🎤 Voice Input (Web Speech API)"]
+        IN_TXT["📝 Typed Field Notes (English / Hindi / Telugu)"]
+        IN_DOC["📄 Measurement Docs (DPR / M-Book: PDF, Excel, CSV)"]
+        IN_IMG["📷 Geotagged Photos (EXIF Timestamp & GPS)"]
+        IN_XER["📊 Native Schedules (Primavera .xer Baseline)"]
+    end
+    subgraph S2 ["2. EXTRACTION, PROVENANCE & COPILOT GATE"]
+        EXT_TAB["⚡ Tabular Parser (Deterministic Zero-LLM)"]
+        EXT_LLM["🧠 Multilingual LLM (Structured Extraction)"]
+        PROV["🏷️ Field Provenance (AI-Inferred vs Human-Reported)"]
+        COPILOT{"❓ Interactive Copilot (1-Question Localized Loop)"}
+    end
+    subgraph S3 ["3. SCHEDULE MATCHING & WBS GRANULARITY"]
+        M_BASE[("📅 PostgreSQL Schedule Baseline (P6 Activities)")]
+        M_CASCADE["🔍 4-Tier Matching Cascade (Exact ID > Asset > FAISS > Mismatch)"]
+        WBS_GATE{"🌐 Scope Granularity Gate (Summary vs Leaf Activity)"}
+        WBS_SPLIT["⚖️ WBS Granularity Bridge (Water-Fill Headroom Allocation)"]
+    end
+    subgraph S4 ["4. DETERMINISTIC VERIFICATION & EVIDENCE FUSION"]
+        V_PHYS["📐 Physical & Quantity Rules (Negative, >100%, UOM)"]
+        V_DIR["📈 Directional Conflict Engine (Same-Date Conflict, Regression)"]
+        V_GEO["📍 Spatial & Temporal Audit (EXIF Date <= 2 Days, Haversine GPS)"]
+        V_FUSE["🔗 Cross-Channel Evidence Fusion (Photo + Doc + Note Corroboration)"]
+        PRIORITY["🎯 Smart Priority Scorer (CPM Criticality + Float + Error Weights)"]
+    end
+    subgraph S5 ["5. HUMAN GOVERNANCE & AUDIT COCKPIT"]
+        QUEUE["📋 Review Queue & Daily Horizon (Priority-Ranked Worklist)"]
+        DECISION{"🛡️ Supervisor Decision Gate (APPROVE / EDIT / REJECT / HOLD)"}
+        AUDIT[("🔐 Tamper-Evident Audit Chain (SHA-256 Chained Hash Log)")]
+    end
+    subgraph S6 ["6. CANONICAL ACTUALS & SCHEDULE INTELLIGENCE"]
+        ACTUALS[("✅ Canonical Approved Actuals (1 Row / Activity Source of Truth)")]
+        CPM["⏱️ CPM Impact Simulation Engine (3-Hop Float Propagation)"]
+        GRAPH["🕸️ Ask Why Causal Delay Graph (Root-Cause Dependency Trace)"]
+        DASH["📊 Operational KPIs & Analytics (Forecast Ratios & Delay Pareto)"]
+        SUMM["📜 AI Execution Summary (Deterministic Facts + Multi-Lingual)"]
+        EXP_CSV["📑 RFC-4180 PMIS CSV Export"]
+        EXP_P6["🔌 Primavera P6 REST Write-Back"]
+    end
+
+    IN_VOICE -->|"Raw Audio / Transcript"| EXT_LLM
+    IN_TXT -->|"Natural Language Notes"| EXT_LLM
+    IN_DOC -->|"Structured Tables"| EXT_TAB
+    IN_DOC -->|"Unstructured Content"| EXT_LLM
+    IN_IMG -->|"Metadata Verification"| V_GEO
+    IN_IMG -->|"Visual Evidence"| V_FUSE
+    IN_XER -->|"Baseline Ingestion"| M_BASE
+
+    EXT_TAB -->|"Structured Fields"| PROV
+    EXT_LLM -->|"Extracted Claim"| PROV
+    PROV -->|"Provenance-Tagged Draft"| COPILOT
+
+    COPILOT -->|"Ambiguous Details"| IN_TXT
+    COPILOT -->|"Validated Claim"| M_CASCADE
+
+    M_BASE -.->|"Schedule Corpus"| M_CASCADE
+    M_CASCADE -->|"Matched Schedule Node"| WBS_GATE
+
+    WBS_GATE -->|"Broad Scope"| WBS_SPLIT
+    WBS_GATE -->|"Direct Leaf Match"| V_PHYS
+    WBS_SPLIT -->|"Allocated Sibling Claims"| V_PHYS
+
+    V_PHYS -->|"Passed"| V_DIR
+    V_DIR -->|"Validated"| V_GEO
+    V_GEO -->|"Site-Verified"| V_FUSE
+    V_FUSE -->|"Corroborated"| PRIORITY
+
+    PRIORITY -->|"Ranked Claims"| QUEUE
+    QUEUE -->|"Inspection View"| DECISION
+
+    DECISION -->|"Approved / Edited Actuals"| ACTUALS
+    DECISION -->|"On Hold for Site Info"| QUEUE
+    DECISION -->|"Terminal Rejection"| AUDIT
+    DECISION -.->|"SHA-256 Hash Chained Record"| AUDIT
+
+    ACTUALS ==>|"Authoritative Progress"| CPM
+    ACTUALS ==>|"Historical Variance"| GRAPH
+    ACTUALS ==>|"Live Progress Metrics"| DASH
+    ACTUALS ==>|"Approved Milestones"| SUMM
+    ACTUALS ==>|"RFC-4180 Data"| EXP_CSV
+    ACTUALS ==>|"Post-Commit Push"| EXP_P6
+
+    CPM -.->|"Float Slip & Critical Drift"| DASH
+    CPM -.->|"Delay Cascades"| GRAPH`;
+
+      navigator.clipboard.writeText(rawCode).then(() => {
+        alert("Mermaid diagram code copied to clipboard!");
+      }).catch(err => {
+        console.error("Could not copy text: ", err);
+      });
+    }
+
+    // Initialize Mermaid
+    document.addEventListener("DOMContentLoaded", function() {
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'dark',
+        flowchart: {
+          useMaxWidth: true,
+          htmlLabels: true,
+          curve: 'basis'
+        }
+      });
+    });
+  </script>
+</body>
+</html>

@@ -163,6 +163,18 @@ def create_phase10_test_db() -> SQLitePsycopgAdapter:
         )
         """
     )
+    # PRD v6 WBS split rows (read by the approved-actuals quantity recalculation)
+    conn.execute(
+        """
+        CREATE TABLE claim_activity_splits (
+            split_id TEXT PRIMARY KEY,
+            event_id TEXT NOT NULL,
+            activity_id TEXT NOT NULL,
+            split_basis TEXT,
+            split_pct REAL NOT NULL
+        )
+        """
+    )
     # Conflict records table
     conn.execute(
         """
@@ -595,13 +607,14 @@ def test_startup_isolation():
     assert len(getattr(production_app, "on_startup", [])) == 0
 
 
-def test_phase1_9_regression_baseline():
+def test_phase1_9_regression_baseline(monkeypatch):
     """Test #15: Baseline functionality from Phases 1-9 remains completely unaffected."""
     client = TestClient(production_app)
     resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json() == {"status": "ok"}
 
+    monkeypatch.setenv("AUTH_DEV_MODE", "true")  # mock P6 exists only in dev mode
     resp_p6 = client.get("/api/v1/mock-p6/health")
     assert resp_p6.status_code == 200
 

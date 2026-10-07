@@ -71,7 +71,12 @@ undiscoverable:
                                 supported — not a separate dependency
                                 section/file — matching this format's
                                 one-row-per-activity shape.
+                                Several predecessors may share one row,
+                                separated by ';' (e.g. "A-1;A-2").
     Relationship Type        -> one of FS, SS, FF, SF (case-insensitive);
+                                for multiple predecessors give one value
+                                per predecessor ("FS;SS") or a single value
+                                applied to all;
                                 defaults to 'FS' (matching
                                 schedule_dependencies.relationship_type's
                                 DB default) when the column is absent or
@@ -157,12 +162,24 @@ _LOCATION_COLUMNS = ("l1", "l2")
 # compatibility if a future source provides a genuine baseline S-curve figure.
 _BASELINE_PCT_COLUMN = "baseline pct complete"
 
+# Phase 1C: Optional float, criticality, and lag columns
+_TOTAL_FLOAT_COLUMNS = ("total float", "total_float", "float")
+_IS_CRITICAL_COLUMNS = ("is critical", "is_critical", "critical")
+_LAG_DAYS_COLUMNS = ("lag days", "lag_days", "lag")
+
 # Dependency columns — see the module docstring's "Dependency columns" note
 # for why these names aren't sourced from an observed reference file.
 _PREDECESSOR_COLUMN = "predecessor activity id"
 _RELATIONSHIP_TYPE_COLUMN = "relationship type"
 _VALID_RELATIONSHIP_TYPES = {"FS", "SS", "FF", "SF"}
 _DEFAULT_RELATIONSHIP_TYPE = "FS"
+
+
+def _find_column_value(row: dict[str, Optional[str]], candidates: tuple[str, ...]) -> Optional[str]:
+    for col in candidates:
+        if col in row:
+            return row[col]
+    return None
 
 
 def _normalize_key(key: str) -> str:
@@ -225,6 +242,33 @@ def _parse_float(
         return None
 
 
+def _parse_bool(
+    raw: Optional[str],
+    row_number: int,
+    field_name: str,
+    activity_id: str,
+    errors: list[ScheduleValidationError],
+) -> Optional[bool]:
+    """Parse a boolean value, returning True/False or None if empty."""
+    cleaned = _clean(raw)
+    if cleaned is None:
+        return None
+    val = cleaned.lower()
+    if val in ("true", "1", "yes", "y", "t", "critical"):
+        return True
+    if val in ("false", "0", "no", "n", "f", "non-critical", "non_critical"):
+        return False
+    errors.append(
+        ScheduleValidationError(
+            row_number,
+            field_name,
+            f"is not a valid boolean: {cleaned!r} (expected true/false, 1/0, yes/no)",
+            activity_id,
+        )
+    )
+    return None
+
+
 def _build_location(
     row: dict[str, Optional[str]],
     row_number: int,
@@ -249,10 +293,10 @@ def _build_location(
 def _resolve_dependencies(
     schedule_id: str,
     valid_activity_ids: set[str],
-    pending: list[tuple[int, str, str, Optional[str]]],
+    pending: list[tuple],
     errors: list[ScheduleValidationError],
 ) -> list[ScheduleDependency]:
-    """Turn (row_number, successor_activity_id, predecessor_raw, relationship_type_raw)
+    """Turn (row_number, successor_activity_id, predecessor_raw, relationship_type_raw, lag_days_raw)
     tuples collected while scanning rows into validated ScheduleDependency
     records, once the full set of this import's activity_ids is known.
 
@@ -263,7 +307,10 @@ def _resolve_dependencies(
     """
     dependencies: list[ScheduleDependency] = []
 
-    for row_number, successor_activity_id, predecessor_raw, relationship_type_raw in pending:
+    for item in pending:
+        row_number, successor_activity_id, predecessor_raw, relationship_type_raw = item[:4]
+        lag_days_raw = item[4] if len(item) > 4 else None
+
         if predecessor_raw not in valid_activity_ids:
             errors.append(
                 ScheduleValidationError(
@@ -303,6 +350,14 @@ def _resolve_dependencies(
                 continue
             relationship_type = candidate
 
+        lag_days = 0.0
+        if lag_days_raw is not None and _clean(lag_days_raw) is not None:
+            parsed_lag = _parse_float(
+                lag_days_raw, row_number, "lag_days", successor_activity_id, errors
+            )
+            if parsed_lag is not None:
+                lag_days = parsed_lag
+
         dependencies.append(
             ScheduleDependency(
                 # dependency_id is a system-generated entity per the project's
@@ -313,6 +368,7 @@ def _resolve_dependencies(
                 predecessor_activity_id=predecessor_raw,
                 successor_activity_id=successor_activity_id,
                 relationship_type=relationship_type,
+                lag_days=lag_days,
             )
         )
 
@@ -432,6 +488,25 @@ def parse_schedule_csv(csv_text: str, schedule_id: str) -> ScheduleParseResult:
             continue
 
         try:
+            total_float_raw = _find_column_value(row, _TOTAL_FLOAT_COLUMNS)
+            total_float = _parse_float(
+                total_float_raw, row_number, "total_float", activity_id, row_errors
+            )
+
+            is_critical_raw = _find_column_value(row, _IS_CRITICAL_COLUMNS)
+            is_critical = None
+            if is_critical_raw is not None and _clean(is_critical_raw) is not None:
+                # Source explicitly provided is_critical — authoritative
+                is_critical = _parse_bool(
+                    is_critical_raw, row_number, "is_critical", activity_id, row_errors
+                )
+            else:
+                # Source did not provide is_critical: fallback derived ONLY if total_float is known
+                if total_float is not None:
+                    is_critical = (total_float <= 0.0)
+                else:
+                    is_critical = None
+
             activity = ScheduleActivity(
                 schedule_id=schedule_id,
                 activity_id=activity_id,
@@ -445,6 +520,8 @@ def parse_schedule_csv(csv_text: str, schedule_id: str) -> ScheduleParseResult:
                 planned_quantity=planned_quantity,
                 uom=uom,
                 baseline_pct_complete=baseline_pct_complete,
+                total_float=total_float,
+                is_critical=is_critical,
             )
         except ValidationError as exc:
             for detail in exc.errors():
@@ -459,7 +536,41 @@ def parse_schedule_csv(csv_text: str, schedule_id: str) -> ScheduleParseResult:
         predecessor_raw = _clean(row.get(_PREDECESSOR_COLUMN))
         if predecessor_raw:
             relationship_type_raw = _clean(row.get(_RELATIONSHIP_TYPE_COLUMN))
-            pending_dependencies.append((row_number, activity_id, predecessor_raw, relationship_type_raw))
+            lag_days_raw = _find_column_value(row, _LAG_DAYS_COLUMNS)
+            # A row may list several predecessors separated by ';' (with parallel
+            # ';'-separated relationship types / lags, or one value applied to all).
+            preds = [p.strip() for p in predecessor_raw.split(";") if p.strip()]
+            rels = [r.strip() for r in relationship_type_raw.split(";")] if relationship_type_raw else []
+            lags = (
+                [x.strip() for x in str(lag_days_raw).split(";")]
+                if lag_days_raw is not None and _clean(lag_days_raw) is not None
+                else []
+            )
+            bad_shape = False
+            for field_name, values in (("relationship_type", rels), ("lag_days", lags)):
+                if len(values) not in (0, 1, len(preds)):
+                    errors.append(
+                        ScheduleValidationError(
+                            row_number,
+                            field_name,
+                            f"has {len(values)} values for {len(preds)} predecessors "
+                            "(expected 1 or one per predecessor)",
+                            activity_id,
+                        )
+                    )
+                    bad_shape = True
+            if bad_shape:
+                continue
+
+            def _pick(values: list[str], i: int) -> Optional[str]:
+                if not values:
+                    return None
+                return (values[i] if len(values) > 1 else values[0]) or None
+
+            for i, pred in enumerate(preds):
+                pending_dependencies.append(
+                    (row_number, activity_id, pred, _pick(rels, i), _pick(lags, i))
+                )
 
     dependencies = _resolve_dependencies(
         schedule_id, {a.activity_id for a in activities}, pending_dependencies, errors

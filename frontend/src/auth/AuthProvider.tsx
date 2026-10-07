@@ -1,17 +1,20 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { authApi } from '@/api';
+import { BASE_URL } from '@/api/client';
 
-export type UserRole = 'SITE_ENGINEER' | 'SUPERVISOR';
+export type UserRole = 'SITE_ENGINEER' | 'SUPERVISOR' | 'PROJECT_MANAGER';
 
 export interface User {
   id: string;
   email: string;
   full_name: string;
   role: UserRole;
+  /** v2 only: platform grants from the server (e.g. CREATE_PROJECT). Never trusted from the browser. */
+  capabilities?: string[];
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
@@ -60,7 +63,7 @@ function mintDevToken(userId: string): string {
   return `${header}.${payload}.`;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -72,13 +75,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Resolves the authenticated role/profile from the REAL backend --
   // never trusted from anything set client-side, in either auth mode.
   const hydrateFromBackend = async (email: string): Promise<User> => {
-    const profile = await authApi.getMe();
-    return {
+    const profile = await authApi.getMe(email);
+    const resolvedUser: User = {
       id: profile.id,
-      email,
-      full_name: profile.full_name,
+      email: email || profile.email,
+      full_name: profile.full_name || (profile.role === 'SUPERVISOR' ? 'Supervisor' : 'Site Engineer'),
       role: profile.role,
     };
+    localStorage.setItem('user', JSON.stringify(resolvedUser));
+    return resolvedUser;
   };
 
   useEffect(() => {
@@ -93,6 +98,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem(TOKEN_KEY, session.access_token);
             const restored = await hydrateFromBackend(session.user?.email ?? '');
             if (!cancelled) setUser(restored);
+          } else {
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem('user');
           }
         } else {
           const token = localStorage.getItem(TOKEN_KEY);
@@ -100,6 +108,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (token && email) {
             const restored = await hydrateFromBackend(email);
             if (!cancelled) setUser(restored);
+          } else {
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(DEV_EMAIL_KEY);
+            localStorage.removeItem('user');
           }
         }
       } catch {
@@ -107,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // rather than getting stuck on a broken session.
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(DEV_EMAIL_KEY);
+        localStorage.removeItem('user');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -114,23 +127,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     restoreSession();
 
+    // Centralized 401 handling (ISS-22): api.ts's apiFetch clears the dead
+    // token and fires this event on any 401 from any page's request. Drop
+    // `user` here so ProtectedRoute's existing redirect-to-/login kicks in
+    // immediately, instead of leaving a signed-out user staring at a page
+    // that keeps silently failing every request.
+    const handleUnauthorized = () => {
+      if (isSupabaseConfigured && supabase) {
+        supabase.auth.signOut().catch(() => {});
+      }
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(DEV_EMAIL_KEY);
+      localStorage.removeItem('user');
+      if (!cancelled) setUser(null);
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+
     if (isSupabaseConfigured && supabase) {
       const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.access_token) {
           localStorage.setItem(TOKEN_KEY, session.access_token);
         } else {
           localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem('user');
           setUser(null);
         }
       });
       return () => {
         cancelled = true;
+        window.removeEventListener('auth:unauthorized', handleUnauthorized);
         subscription.subscription.unsubscribe();
       };
     }
 
     return () => {
       cancelled = true;
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
     };
   }, []);
 
@@ -148,8 +180,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (authError || !data.session) {
           throw new Error(authError?.message || 'Sign-in failed.');
         }
+        localStorage.removeItem('user');
         localStorage.setItem(TOKEN_KEY, data.session.access_token);
         const loggedInUser = await hydrateFromBackend(data.session.user?.email ?? emailTrimmed);
+        setUser(loggedInUser);
+        return;
+      }
+
+      // Local integration login: a REAL signed JWT from the backend, honoured only against the isolated DB.
+      if (import.meta.env.VITE_LOCAL_DEMO_AUTH === 'true') {
+        const res = await fetch(`${BASE_URL}/api/v1/auth/local-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailTrimmed, password }),
+        });
+        if (!res.ok) throw new Error(res.status === 401 ? 'Incorrect email or password.' : 'Local demo sign-in is not available.');
+        const { access_token } = await res.json();
+        localStorage.removeItem('user');
+        localStorage.setItem(TOKEN_KEY, access_token);
+        localStorage.setItem(DEV_EMAIL_KEY, emailTrimmed);
+        const loggedInUser = await hydrateFromBackend(emailTrimmed);
         setUser(loggedInUser);
         return;
       }
@@ -159,6 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!account || account.password !== password) {
         throw new Error('Incorrect email or password.');
       }
+      localStorage.removeItem('user');
       const devToken = mintDevToken(account.id);
       localStorage.setItem(TOKEN_KEY, devToken);
       localStorage.setItem(DEV_EMAIL_KEY, emailTrimmed);
@@ -167,6 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(DEV_EMAIL_KEY);
+      localStorage.removeItem('user');
       const message = err?.message || 'Login failed.';
       setError(message);
       throw new Error(message);
@@ -181,6 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(DEV_EMAIL_KEY);
+    localStorage.removeItem('user');
     setUser(null);
   };
 

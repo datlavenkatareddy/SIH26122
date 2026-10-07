@@ -1,8 +1,18 @@
+import { BRAND_NAME, BRAND_TAGLINE } from '@/brand';
+import { PAGE_AUDIT, PAGE_INTELLIGENCE, PAGE_WBS } from '@/layout/pageAccess';
 import React, { useState, useEffect } from 'react';
 import { Outlet, Navigate, useLocation, Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/auth/AuthProvider';
 import { useTheme } from '@/theme/ThemeProvider';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { digestApi } from '@/api';
+import { updatesApi } from '@/api/prototype';
 import {
+  AlertOctagon,
+  BellRing,
+  GitBranch,
   LayoutDashboard,
   ClipboardList,
   Layers,
@@ -16,28 +26,33 @@ import {
   PlusCircle,
   HardHat,
   ShieldCheck,
-  Building2,
   Sun,
   Moon,
   Flame,
+  FolderTree,
+  Sparkles,
+  Bot,
+  Fingerprint,
+  Briefcase,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import GlobalIndustrialBackground from '@/components/GlobalIndustrialBackground';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ProjectSwitcher } from '@/components/ProjectSwitcher';
+import { ProjectGate } from '@/components/ProjectGate';
+import { useProjectState, SELECTED_PROJECT_KEY } from '@/context/ProjectContext';
+import type { Permission } from '@/api/projects';
+import { IS_V2 } from '@/config';
+import { useV2NavData } from '@/v2/nav';
 
 const SIDEBAR_COLLAPSED_KEY = 'setu_sidebar_collapsed_v1';
 
-// IndianOil brand tokens
-const IOCL = {
-  navy:   '#003087',   // deep navy – sidebar/header bg
-  blue:   '#1565C0',   // medium blue – hover, accents
-  orange: '#F47920',   // brand orange – CTA, active
-  navyDark: '#00204f', // sidebar footer
-  navyLight: '#1A4BA0', // slightly lighter for hover states
-};
-
 export default function AppShell() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
+  const { can, role, status: projectStatus, currentProject } = useProjectState();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -50,73 +65,121 @@ export default function AppShell() {
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(isCollapsed));
   }, [isCollapsed]);
 
+  const isReviewer = can('REVIEW_CLAIM');
+
+  // Live pending/actionable count for the sidebar badges. Claims with status REVIEW_REQUIRED or VALIDATED
+  // are the ones a reviewer still needs to act on. Only asked once a project + schedule are selected.
+  const { data: pendingClaims } = useQuery({
+    queryKey: ['sidebar-pending-count', projectStatus],
+    queryFn: () => digestApi.getAll(),
+    enabled: isAuthenticated && isReviewer && projectStatus === 'ready',
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+  // Site engineer: unread decisions on their own claims (persisted notifications, recipient-only on the backend).
+  const isEngineer = can('CREATE_EXECUTION_EVENT') && !isReviewer;
+  const selectedProjectId = localStorage.getItem(SELECTED_PROJECT_KEY);
+  const { data: unreadUpdates } = useQuery({
+    queryKey: ['v7', 'notifications', selectedProjectId, 'sidebar'],
+    queryFn: () => updatesApi.notifications(selectedProjectId!, { unreadOnly: true, limit: 1 }),
+    enabled: isAuthenticated && isEngineer && projectStatus === 'ready' && !!selectedProjectId,
+    staleTime: 20_000,
+    refetchInterval: 30_000,
+  });
+  const unreadCount = unreadUpdates?.unread_count ?? 0;
+  const v2Nav = useV2NavData(IS_V2 && isAuthenticated && projectStatus === 'ready', currentProject?.id ?? null, can);
+  const pendingCount = (pendingClaims || []).filter(
+    (c) => c.status === 'REVIEW_REQUIRED' || c.status === 'VALIDATED'
+  ).length;
+
+  // Session restore is asynchronous: do not bounce a returning user to /login before it has finished.
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-xs text-slate-400 font-mono">
+        Restoring session…
+      </div>
+    );
+  }
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  const isSupervisor = user.role === 'SUPERVISOR';
-
-  const supervisorNavItems = [
-    { label: 'Daily Digest',      path: '/digest',    icon: ClipboardList },
-    { label: 'Review Workspace',  path: '/review',    icon: Layers },
-    { label: 'Dashboard',         path: '/dashboard', icon: LayoutDashboard },
-    { label: 'Activity History',  path: '/history',   icon: Clock },
-    { label: 'Impact Preview',    path: '/impact',    icon: Activity },
+  // Navigation is driven by the caller's PROJECT permissions (the same RBAC table the backend enforces).
+  const legacyNavItems: { label: string; path: string; icon: any; badge?: number; requires: Permission[] }[] = [
+    { label: t('nav.claimIntake'),      path: '/intake',    icon: PlusCircle,      requires: ['CREATE_EXECUTION_EVENT'] },
+    { label: 'Issues & Delays',         path: '/issues',    icon: AlertOctagon,    requires: ['REPORT_ISSUE', 'VIEW_MONITORING'] },
+    { label: 'My Updates',              path: '/updates',   icon: BellRing,        badge: unreadCount, requires: ['CREATE_EXECUTION_EVENT'] },
+    { label: t('nav.dailyDigest'),      path: '/digest',    icon: ClipboardList,   badge: pendingCount, requires: ['REVIEW_CLAIM'] },
+    { label: t('nav.reviewWorkspace'),  path: '/review',    icon: Layers,          badge: pendingCount, requires: ['REVIEW_CLAIM'] },
+    { label: t('nav.timeAgent', { defaultValue: 'Time Agent' }), path: '/time-agent', icon: Bot, requires: ['REVIEW_CLAIM'] },
+    { label: t('nav.dashboard'),        path: '/dashboard', icon: LayoutDashboard, requires: ['REVIEW_CLAIM'] },
+    { label: t('nav.activityHistory'),  path: '/history',   icon: Clock,           requires: ['REVIEW_CLAIM'] },
+    { label: t('nav.impactPreview'),    path: '/impact',    icon: Activity,        requires: ['REVIEW_CLAIM', 'VIEW_MONITORING'] },
+    { label: t('wbs.navLabel'),         path: '/wbs',       icon: FolderTree,      requires: PAGE_WBS },
+    { label: t('nav.executionSummary'), path: '/summary',   icon: Sparkles,        requires: ['REVIEW_CLAIM'] },
+    { label: 'Root Cause & Memory',     path: '/root-cause', icon: GitBranch,      requires: ['MANAGE_BLOCKERS', 'VIEW_MONITORING'] },
+    { label: 'Project Intelligence',    path: '/intelligence', icon: Bot,          requires: PAGE_INTELLIGENCE },
+    { label: 'Audit Trail',             path: '/audit',     icon: Fingerprint,     requires: PAGE_AUDIT },
   ];
-
-  const siteEngineerNavItems = [
-    { label: 'Claim Intake', path: '/intake', icon: PlusCircle },
-  ];
-
-  const navItems = isSupervisor ? supervisorNavItems : siteEngineerNavItems;
+  const allNavItems = IS_V2 ? [...v2Nav.items, ...legacyNavItems] : legacyNavItems;
+  const navItems = projectStatus === 'ready' ? allNavItems.filter((i) => i.requires.some((p) => can(p))) : [];
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  const userInitials = (user.full_name || user.email || 'U').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  const isSupervisor = isReviewer;
+  const isProjectManager = IS_V2 && role === 'PROJECT_MANAGER';
+
   return (
-    <div
-      className="min-h-screen flex font-sans antialiased selection:bg-[#F47920] selection:text-white transition-colors duration-200"
-      style={{ backgroundColor: theme === 'dark' ? '#00194d' : '#E8F4FD' }}
-    >
+    <div className="min-h-screen flex text-foreground font-sans antialiased selection:bg-[#FF7A18] selection:text-white transition-colors duration-200 relative bg-background">
+      {/* Reusable Global Industrial Refinery Background + Readability Overlays */}
+      <GlobalIndustrialBackground variant="ambient" />
+
       {/* Mobile Backdrop */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/70 backdrop-blur-xs z-40 lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
       {/* ── LEFT SIDEBAR ─────────────────────────────────────────────────────── */}
       <aside
-        style={{ backgroundColor: IOCL.navy }}
         className={cn(
-          'fixed lg:static top-0 bottom-0 left-0 z-50 flex flex-col justify-between transition-all duration-300 ease-in-out shadow-2xl',
-          isCollapsed ? 'lg:w-[72px]' : 'lg:w-64',
-          isMobileOpen ? 'w-64 translate-x-0' : '-translate-x-full lg:translate-x-0'
+          'fixed lg:sticky top-0 left-0 h-screen z-50 flex flex-col shrink-0 transition-all duration-300 ease-in-out shadow-2xl backdrop-blur-md',
+          'bg-gradient-to-b from-[#001D5E] via-[#002675] to-[#00164A] border-r border-white/10',
+          'dark:from-[#061526]/98 dark:via-[#071B2D]/95 dark:to-[#061526]/98 dark:border-r dark:border-[#1E3A5F]',
+          isCollapsed ? 'w-[72px]' : 'w-64',
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         {/* Sidebar Header — Brand */}
         <div
-          className="p-4 flex items-center justify-between border-b"
-          style={{ borderColor: 'rgba(255,255,255,0.12)' }}
+          className={cn(
+            'flex shrink-0 border-b transition-all duration-300',
+            isCollapsed
+              ? 'px-2 py-3 flex-col items-center gap-2'
+              : 'p-4 flex-row items-center justify-between'
+          )}
+          style={{ borderColor: 'rgba(30, 58, 95, 0.5)' }}
         >
-          <div className="flex items-center gap-3 overflow-hidden">
-            {/* IndianOil-inspired flame icon in orange circle */}
+          <div className={cn('flex items-center overflow-hidden', isCollapsed ? 'justify-center' : 'gap-3')}>
+            {/* ANVYRA Orange Flame Icon in gradient circle */}
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${IOCL.orange}, #d4640f)` }}
+              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/30 bg-gradient-to-br from-[#FF7A18] to-[#FF941F]"
             >
               <Flame className="w-5 h-5 text-white" />
             </div>
             {!isCollapsed && (
               <div className="flex flex-col min-w-0">
                 <span className="font-bold text-base text-white leading-tight truncate tracking-tight">
-                  Setu <span style={{ color: IOCL.orange }}>AI</span>
+                  {BRAND_NAME}
                 </span>
-                <span className="text-[10px] font-semibold tracking-wider truncate" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                  SIH26122 · Oil India
+                <span className="text-[10px] font-semibold tracking-wide truncate text-[#94A8B8]">
+                  {BRAND_TAGLINE}
                 </span>
               </div>
             )}
@@ -127,8 +190,12 @@ export default function AppShell() {
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="hidden lg:flex h-8 w-8 rounded-lg text-white/60 hover:text-white hover:bg-white/10"
-            title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            className={cn(
+              'hidden lg:flex rounded-lg text-white/70 hover:text-white hover:bg-white/10 shrink-0',
+              isCollapsed ? 'h-7 w-7' : 'h-8 w-8'
+            )}
+            title={isCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
+            aria-label={isCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
           >
             {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </Button>
@@ -138,14 +205,15 @@ export default function AppShell() {
             variant="ghost"
             size="icon"
             onClick={() => setIsMobileOpen(false)}
-            className="lg:hidden text-white/60 hover:text-white h-8 w-8"
+            className="lg:hidden text-white/70 hover:text-white h-8 w-8"
+            aria-label={t('common.close')}
           >
             <X className="w-5 h-5" />
           </Button>
         </div>
 
         {/* Navigation Items */}
-        <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+        <div className="flex-1 py-4 px-3 space-y-1.5 overflow-y-auto overflow-x-hidden">
           {navItems.map((item) => {
             const isActive =
               location.pathname === item.path ||
@@ -157,28 +225,40 @@ export default function AppShell() {
                 to={item.path}
                 onClick={() => setIsMobileOpen(false)}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all group',
+                  'flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all group relative',
                   isActive
-                    ? 'text-white shadow-md'
-                    : 'text-white/65 hover:text-white hover:bg-white/10'
+                    ? 'bg-gradient-to-r from-[#FF7A18] to-[#FF941F] text-white shadow-md shadow-orange-500/35 font-bold'
+                    : 'text-[#D8E2EA] hover:text-white hover:bg-white/10 dark:hover:bg-[#0A2340]/80'
                 )}
-                style={isActive ? { backgroundColor: IOCL.orange, boxShadow: `0 4px 16px rgba(244,121,32,0.35)` } : {}}
                 title={isCollapsed ? item.label : undefined}
               >
                 <Icon
                   className={cn(
-                    'w-5 h-5 shrink-0 transition-transform group-hover:scale-110',
-                    isActive ? 'text-white' : 'text-white/50 group-hover:text-white'
+                    'w-5 h-5 shrink-0 transition-transform group-hover:scale-105',
+                    isActive ? 'text-white' : 'text-[#94A8B8] group-hover:text-white'
                   )}
                 />
                 {!isCollapsed && (
-                  <span className="whitespace-nowrap">{item.label}</span>
+                  <span className="whitespace-nowrap flex-1">{item.label}</span>
                 )}
-                {/* Collapsed tooltip pip */}
+                {!!item.badge && (
+                  <span
+                    className={cn(
+                      'flex items-center justify-center rounded-full text-[10px] font-bold leading-none shrink-0',
+                      isCollapsed
+                        ? 'absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1'
+                        : 'min-w-[20px] h-5 px-1.5',
+                      isActive ? 'bg-white text-[#FF7A18]' : 'bg-[#FF7A18] text-white'
+                    )}
+                    aria-label={`${item.badge} pending`}
+                  >
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                )}
+                {/* Collapsed tooltip / active pip */}
                 {isCollapsed && isActive && (
                   <span
-                    className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-l-full"
-                    style={{ backgroundColor: IOCL.orange }}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-l-full bg-white shadow-xs"
                   />
                 )}
               </Link>
@@ -186,30 +266,33 @@ export default function AppShell() {
           })}
         </div>
 
-        {/* Sidebar Footer — User & Logout */}
+        {/* Sidebar Footer — User & Logout (Pinned to Viewport Bottom) */}
         <div
-          className="p-3 border-t"
-          style={{ borderColor: 'rgba(255,255,255,0.12)', backgroundColor: IOCL.navyDark }}
+          className="p-3 shrink-0 border-t bg-[#001438]/90 dark:bg-[#061526]/95 backdrop-blur-md"
+          style={{ borderColor: 'rgba(30, 58, 95, 0.6)' }}
         >
           <div className={cn('flex items-center gap-2', isCollapsed ? 'justify-center' : 'justify-between')}>
             {!isCollapsed && (
               <div className="flex items-center gap-2.5 overflow-hidden">
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.15)' }}
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-[#1E3A5F] bg-[#0A2340]"
                 >
-                  {isSupervisor
-                    ? <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    : <HardHat className="w-4 h-4 text-amber-400" />}
+                  {isProjectManager
+                    ? <Briefcase className="w-4 h-4 text-[#0284C7]" />
+                    : isSupervisor
+                      ? <ShieldCheck className="w-4 h-4 text-[#14B8A6]" />
+                      : <HardHat className="w-4 h-4 text-[#FF8A25]" />}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-semibold text-white truncate">{user.full_name}</span>
-                  <span className="text-[10px] font-medium truncate flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                  <span className="text-xs font-semibold text-[#F5F7FA] truncate">
+                    {user.full_name || user.email}
+                  </span>
+                  <span className="text-[10px] font-medium truncate flex items-center gap-1 text-[#94A8B8]">
                     <span
                       className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: isSupervisor ? '#10b981' : '#f59e0b' }}
+                      style={{ backgroundColor: isProjectManager ? '#0284C7' : isSupervisor ? '#14B8A6' : '#FF8A25' }}
                     />
-                    {user.role}
+                    {role ?? '—'}
                   </span>
                 </div>
               </div>
@@ -219,8 +302,9 @@ export default function AppShell() {
               variant="ghost"
               size="icon"
               onClick={handleLogout}
-              className="text-white/50 hover:text-rose-300 hover:bg-rose-500/20 h-8 w-8 rounded-lg shrink-0"
-              title="Logout"
+              className="text-[#94A8B8] hover:text-rose-300 hover:bg-rose-500/20 h-8 w-8 rounded-lg shrink-0 focus-visible:ring-2 focus-visible:ring-rose-400 cursor-pointer"
+              title={t('common.logout')}
+              aria-label={t('common.logout')}
             >
               <LogOut className="w-4 h-4" />
             </Button>
@@ -229,69 +313,67 @@ export default function AppShell() {
       </aside>
 
       {/* ── MAIN CONTENT AREA ────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-x-hidden relative z-10">
         {/* Top Header Bar */}
-        <header
-          className="h-16 px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-md transition-colors duration-200"
-          style={{
-            backgroundColor: theme === 'dark' ? IOCL.navy : IOCL.navy,
-            borderBottom: `3px solid ${IOCL.orange}`,
-          }}
-        >
-          <div className="flex items-center gap-3">
+        <header className="h-16 px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs bg-white/85 dark:bg-[#071B2D]/85 backdrop-blur-md border-b border-slate-200/60 dark:border-[#1E3A5F] transition-colors duration-200">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {/* Mobile hamburger */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setIsMobileOpen(true)}
-              className="lg:hidden text-white/80 hover:text-white hover:bg-white/10"
+              className="lg:hidden text-foreground hover:bg-card-subtle shrink-0"
             >
               <Menu className="w-5 h-5" />
             </Button>
 
-            {/* Live status badge */}
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-mono font-medium hidden sm:inline" style={{ color: 'rgba(255,255,255,0.65)' }}>
-                Primavera P6 v3.2 · Live
-              </span>
-            </div>
+            {/* Global Project Switcher */}
+            <ProjectSwitcher />
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Language Toggle */}
+            <LanguageSwitcher variant="adaptive" />
+
             {/* Theme Toggle */}
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={toggleTheme}
-              className="text-white/70 hover:text-white hover:bg-white/10 h-8 px-3 gap-1.5 text-xs rounded-xl border border-white/15"
-              title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+              className="h-8 px-3 gap-1.5 text-xs rounded-xl border border-slate-300 dark:border-[#1E3A5F] bg-white/95 dark:bg-[#0A2340] hover:bg-[#EEF5FC] dark:hover:bg-[#0B2D4A] text-foreground shadow-2xs font-semibold"
+              title={theme === 'dark' ? t('common.switchToLight') : t('common.switchToDark')}
             >
               {theme === 'dark'
-                ? <><Sun className="w-3.5 h-3.5 text-amber-300" /><span className="hidden sm:inline">Light</span></>
-                : <><Moon className="w-3.5 h-3.5 text-blue-300" /><span className="hidden sm:inline">Dark</span></>
+                ? <><Sun className="w-3.5 h-3.5 text-amber-400" /><span className="hidden sm:inline">{t('common.lightMode')}</span></>
+                : <><Moon className="w-3.5 h-3.5 text-[#0284C7]" /><span className="hidden sm:inline">{t('common.darkMode')}</span></>
               }
             </Button>
 
             {/* Human-in-the-Loop Badge */}
+            <div className="px-3 py-1 rounded-full text-[11px] font-mono font-semibold flex items-center gap-1.5 border border-[#FF7A18]/40 bg-[#FF7A18]/10 text-[#FF7A18] dark:text-[#FF941F] shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF7A18] animate-pulse" />
+              <span className="hidden sm:inline">{t('common.humanInTheLoop')}</span>
+              <span className="sm:hidden">{t('common.hil')}</span>
+            </div>
+
+            {/* User Initial Avatar */}
             <div
-              className="px-3 py-1 rounded-full text-[11px] font-mono font-semibold flex items-center gap-1.5 border"
-              style={{
-                backgroundColor: 'rgba(244,121,32,0.15)',
-                borderColor: 'rgba(244,121,32,0.35)',
-                color: '#F47920',
-              }}
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-[#14B8A6] to-[#0D9488] text-white font-bold text-xs flex items-center justify-center shadow-xs shrink-0"
+              title={`${user.full_name || user.email}${role ? ' · ' + role : ''}`}
             >
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#F47920' }} />
-              <span className="hidden sm:inline">Human-in-the-Loop</span>
-              <span className="sm:hidden">HIL</span>
+              {userInitials}
             </div>
           </div>
         </header>
 
         {/* Main Content Viewport */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          <Outlet />
+          {/* Keeps the sidebar/header alive if a page crashes; resets on navigation. */}
+          <ErrorBoundary label="This page" resetKey={location.pathname + location.search}>
+            <ProjectGate>
+              <Outlet />
+            </ProjectGate>
+          </ErrorBoundary>
         </main>
       </div>
     </div>

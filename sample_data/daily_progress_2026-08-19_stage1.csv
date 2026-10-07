@@ -1,0 +1,11 @@
+Report Date,Activity ID,Task ID,Discipline,Work Description,Unit,Planned Qty,Prior Actual,Today Actual,Cumulative Actual,Progress Pct,Status,Evidence Reference,Remarks
+2026-08-19,HSE-PS3-WST-003,HSE-PS3-WST-003-01,HSE,Hazardous chemical waste storage and manifesting,bins,12,0,5,5,41.7,Ongoing,site_diary_2026-08-19.jpg,Waste storage bins delivered and positioned.
+2026-08-19,EQP-PS3-TK-001,EQP-PS3-TK-001-01,Static/Rotating Equipment,Sump Tank TK-01 internal inspection,ea,1,0,0.5,0.5,50.0,Ongoing,site_diary_2026-08-19.jpg,Internal inspection commenced; half complete.
+2026-08-19,ELE-PS3-CBL-001,ELE-PS3-CBL-001-01,Electrical,11kV medium voltage cable pulling,m,500,0,180,180,36.0,Ongoing,discipline_progress_2026-08-19.xlsx,Cable drums staged and first runs pulled.
+2026-08-19,PIP-PS3-HDR-100,PIP-PS3-HDR-100-01,Piping,Above ground utility header fabrication,m,100,0,35,35,35.0,Ongoing,discipline_progress_2026-08-19.xlsx,Header fabrication started at laydown yard.
+2026-08-19,EQP-PS3-AIR-001,EQP-PS3-AIR-001-01,Static/Rotating Equipment,Air Receiver Vessel V-103 erection,ea,1,0,0.5,0.5,50.0,Ongoing,site_diary_2026-08-19.jpg,Vessel set on saddle; bolting in progress.
+2026-08-19,HSE-PS3-AUD-001,HSE-PS3-AUD-001-01,HSE,Weekly environmental compliance audit,audits,2,0,1,1,50.0,Ongoing,site_diary_2026-08-19.jpg,First weekly audit completed.
+2026-08-19,ELE-PS3-SWG-001,ELE-PS3-SWG-001-01,Electrical,11kV switchgear panel positioning,panels,8,0,3,3,37.5,Ongoing,discipline_progress_2026-08-19.xlsx,First three panels positioned in substation.
+2026-08-19,INS-PS3-FGS-001,INS-PS3-FGS-001-01,Instrumentation,Fire and gas detector mounting,ea,16,0,6,6,37.5,Ongoing,discipline_progress_2026-08-19.xlsx,Detectors mounted in process area zone 1.
+2026-08-19,PIP-PS3-HDR-100-C,PIP-PS3-HDR-100-C-01,Piping,Utility header spool section C fabrication,m,30,0,12,12,40.0,Ongoing,discipline_progress_2026-08-19.xlsx,Spool section C fit-up started.
+2026-08-19,EQP-PS3-GEN-001,EQP-PS3-GEN-001-01,Static/Rotating Equipment,Diesel Generator DG-01 installation,ea,1,0,0.4,0.4,40.0,Ongoing,site_diary_2026-08-19.jpg,Generator skid positioned in generator bay.

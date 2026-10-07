@@ -1,40 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { digestApi, ExecutionEvent, Discipline, ClaimStatus } from '@/api';
+import { useTranslation } from 'react-i18next';
+import { digestApi, ExecutionEvent, DISCIPLINES } from '@/api';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
-  AlertTriangle,
   Clock,
-  RefreshCw,
   ArrowRight,
-  PauseCircle,
-  XCircle,
   Sparkles,
   CheckSquare,
   ClipboardList,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { StatusBadge } from '@/components/StatusBadge';
+import { ProvenanceBadge } from '@/components/ProvenanceBadge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ErrorState } from '@/components/ui/error-state';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-
-const DISCIPLINES: Discipline[] = [
-  'CIVIL',
-  'PIPING',
-  'STATIC_ROTATING_EQUIPMENT',
-  'ELECTRICAL',
-  'INSTRUMENTATION',
-  'HSE',
-];
+import { useProject } from '@/context/ProjectContext';
+import { Building2 } from 'lucide-react';
 
 export default function DailyDigest() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { currentProject, currentScheduleVersion } = useProject();
 
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [showCalendar, setShowCalendar] = useState<boolean>(false);
+  const [hasResolvedInitialDate, setHasResolvedInitialDate] = useState<boolean>(false);
 
   const [events, setEvents] = useState<ExecutionEvent[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -51,15 +47,62 @@ export default function DailyDigest() {
       const data = await digestApi.getByDate(dateStr);
       setEvents(data);
     } catch (err: any) {
-      setError(err.message || 'Failed to load daily digest claims');
+      setError(err.message || t('digest.failedToLoad'));
     } finally {
       setIsLoading(false);
     }
   };
 
+  // On first load, jump to the event_date of the MOST RECENTLY CREATED
+  // claim, instead of blindly defaulting to today's real calendar date.
+  // Two things this deliberately does NOT use, because both fail here:
+  //   - max(event_date): a claim's event_date is whatever date its source
+  //     report/text reported, not its upload date. Since untyped/undated
+  //     submissions fall back to today's real date, "today" ends up WITH
+  //     the max event_date too (it's not empty) even when it's full of
+  //     stale test claims and the real newly-ingested ones are dated
+  //     elsewhere (e.g. this project's sample data all sits in Aug 2026).
+  //   - most claims / most actionable claims per date: today can easily
+  //     have MORE accumulated claims than the date someone just uploaded
+  //     to, for the same reason.
+  // Sorting by created_at (when the claim actually entered the system)
+  // instead directly answers "where did what I just ingested land" --
+  // exactly what "newly extracted claims aren't visible in the digest"
+  // means. Runs once; the Today/prev/next/calendar controls below still
+  // navigate normally afterward, including to the real today if wanted.
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const all = await digestApi.getAll();
+        if (!cancelled && all.length > 0) {
+          const mostRecentlyCreated = all.reduce((latest, e) =>
+            e.created_at > latest.created_at ? e : latest
+          );
+          const latestDate = mostRecentlyCreated.event_date;
+          setSelectedDate(latestDate);
+          setCurrentMonth(new Date(latestDate));
+          setHasResolvedInitialDate(true);
+          loadDigest(latestDate);
+          return;
+        }
+      } catch {
+        // Fall through -- load whatever selectedDate already is
+      }
+      if (!cancelled) {
+        setHasResolvedInitialDate(true);
+        loadDigest(selectedDate);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentProject.id]);
+
+  useEffect(() => {
+    if (!hasResolvedInitialDate) return;
     loadDigest(selectedDate);
-  }, [selectedDate]);
+  }, [selectedDate, hasResolvedInitialDate]);
 
   const handleDateChange = (newDateStr: string) => {
     setSelectedDate(newDateStr);
@@ -97,7 +140,7 @@ export default function DailyDigest() {
       setBulkResult(res);
       loadDigest(selectedDate);
     } catch (err: any) {
-      setError('Bulk approve failed: ' + err.message);
+      setError(t('digest.bulkApproveFailed', { message: err.message }));
     } finally {
       setIsBulking(false);
     }
@@ -106,25 +149,9 @@ export default function DailyDigest() {
   const totalClaims = events.length;
   const reviewRequired = events.filter((e) => e.status === 'REVIEW_REQUIRED').length;
   const validated = events.filter((e) => e.status === 'VALIDATED').length;
+  const unmatched = events.filter((e) => e.status === 'UNMATCHED' || !e.matched_activity_id).length;
   const approved = events.filter((e) => e.status === 'APPROVED').length;
   const hold = events.filter((e) => e.status === 'HOLD').length;
-
-  const getStatusBadge = (status: ClaimStatus) => {
-    switch (status) {
-      case 'APPROVED':
-        return <span className="bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Approved</span>;
-      case 'REVIEW_REQUIRED':
-        return <span className="bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30 text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5" /> Review Required</span>;
-      case 'VALIDATED':
-        return <span className="bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-500/30 text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Machine Validated</span>;
-      case 'HOLD':
-        return <span className="bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-300 dark:border-slate-700 text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1"><PauseCircle className="w-3.5 h-3.5" /> On Hold</span>;
-      case 'REJECTED':
-        return <span className="bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 text-xs px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1"><XCircle className="w-3.5 h-3.5" /> Rejected</span>;
-      default:
-        return <span className="bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 text-xs px-2.5 py-0.5 rounded-full font-semibold">{status}</span>;
-    }
-  };
 
   const renderCalendar = () => {
     const year = currentMonth.getFullYear();
@@ -151,10 +178,10 @@ export default function DailyDigest() {
           className={cn(
             'h-8 w-8 rounded-lg text-xs font-semibold flex items-center justify-center transition-all',
             isSelected
-              ? 'bg-[#FC4C02] text-white shadow-md font-bold scale-105'
+              ? 'bg-gradient-to-r from-[#FF7A18] to-[#FF941F] text-white shadow-xs font-bold scale-105'
               : isTodayStr
-              ? 'border border-[#FC4C02] text-[#FC4C02] hover:bg-slate-100 dark:hover:bg-blue-900/50'
-              : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-blue-900/40'
+              ? 'border border-[#FF7A18] text-[#FF7A18] hover:bg-card-subtle'
+              : 'text-foreground hover:bg-card-subtle'
           )}
         >
           {d}
@@ -162,19 +189,19 @@ export default function DailyDigest() {
       );
     }
 
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthNames = t('digest.months', { returnObjects: true }) as unknown as string[];
 
     return (
-      <div className="p-4 bg-white dark:bg-[#001E60] border border-slate-200 dark:border-blue-800 rounded-2xl shadow-xl w-72 space-y-3 z-50">
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-blue-800 pb-2">
-          <span className="text-xs font-bold text-slate-900 dark:text-white">
+      <div className="p-4 bg-card border border-border rounded-xl shadow-xl w-72 space-y-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+        <div className="flex items-center justify-between border-b border-border pb-2">
+          <span className="text-xs font-bold text-foreground">
             {monthNames[month]} {year}
           </span>
           <div className="flex gap-1">
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-blue-900/60"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground"
               onClick={() => setCurrentMonth(new Date(year, month - 1, 1))}
             >
               <ChevronLeft className="w-4 h-4" />
@@ -182,15 +209,15 @@ export default function DailyDigest() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-blue-900/60"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground"
               onClick={() => setCurrentMonth(new Date(year, month + 1, 1))}
             >
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
-        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-slate-400 uppercase">
-          <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+        <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-muted-foreground uppercase">
+          <span>{t('digest.sunday')}</span><span>{t('digest.monday')}</span><span>{t('digest.tuesday')}</span><span>{t('digest.wednesday')}</span><span>{t('digest.thursday')}</span><span>{t('digest.friday')}</span><span>{t('digest.saturday')}</span>
         </div>
         <div className="grid grid-cols-7 gap-1">{days}</div>
       </div>
@@ -198,16 +225,26 @@ export default function DailyDigest() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* Top Header Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-blue-900/50 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2">
-            <ClipboardList className="w-6 h-6 text-[#FC4C02]" />
-            Daily Digest & Claims Log
+          <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground pb-1">
+            <span className="flex items-center gap-1 font-bold text-primary">
+              <Building2 className="w-3.5 h-3.5 text-[#FF7A18]" />
+              {currentProject.name} ({currentProject.code})
+            </span>
+            <span>·</span>
+            <span className="text-[11px] px-2 py-0.2 rounded bg-slate-100 dark:bg-[#0B2742] text-muted-foreground border border-slate-300 dark:border-[#214766]">
+              {currentScheduleVersion.versionNumber}
+            </span>
+          </div>
+          <h1 className="text-2xl font-extrabold text-[#071A2D] dark:text-[#F5F7FA] tracking-tight flex items-center gap-2">
+            <ClipboardList className="w-6 h-6 text-primary" />
+            {t('digest.title')}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
-            Review field progress claims grouped by discipline for the selected date.
+          <p className="text-[#334155] dark:text-[#CBD5E1] text-xs font-semibold mt-1">
+            {t('digest.subtitle')}
           </p>
         </div>
 
@@ -217,7 +254,7 @@ export default function DailyDigest() {
             variant="outline"
             size="sm"
             onClick={handlePrevDay}
-            className="bg-white dark:bg-[#001E60] border-slate-300 dark:border-blue-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-blue-900/50 h-9"
+            className="h-9"
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
@@ -226,9 +263,9 @@ export default function DailyDigest() {
             variant="outline"
             size="sm"
             onClick={() => setShowCalendar(!showCalendar)}
-            className="bg-white dark:bg-[#001E60] border-slate-300 dark:border-blue-800 text-slate-900 dark:text-slate-100 hover:border-[#FC4C02] font-mono text-xs h-9 px-3 gap-2 shadow-sm"
+            className="font-mono text-xs h-9 px-3 gap-2 shadow-xs"
           >
-            <CalendarIcon className="w-4 h-4 text-[#FC4C02]" />
+            <CalendarIcon className="w-4 h-4 text-primary" />
             <span>{selectedDate}</span>
           </Button>
 
@@ -242,7 +279,7 @@ export default function DailyDigest() {
             variant="outline"
             size="sm"
             onClick={handleNextDay}
-            className="bg-white dark:bg-[#001E60] border-slate-300 dark:border-blue-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-blue-900/50 h-9"
+            className="h-9"
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -251,112 +288,114 @@ export default function DailyDigest() {
             variant="ghost"
             size="sm"
             onClick={handleToday}
-            className="text-xs text-[#FC4C02] hover:text-[#e04302] hover:bg-[#FC4C02]/10 h-9 font-semibold"
+            className="text-xs text-primary hover:text-primary hover:bg-primary/10 h-9 font-semibold"
           >
-            Today
+            {t('digest.today')}
           </Button>
         </div>
       </div>
 
-      {/* Summary KPI Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="p-4 rounded-xl bg-white dark:bg-[#001E60] border border-slate-200 dark:border-blue-900/60 shadow-sm">
-          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Total Claims</span>
-          <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1 font-mono">{totalClaims}</div>
+      {/* Summary KPI Bar — Multi-Level Surface Elevation */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="p-4 rounded-xl bg-card border border-border shadow-xs backdrop-blur-xs">
+          <span className="text-[11px] font-bold text-muted-foreground uppercase">{t('digest.totalClaims')}</span>
+          <div className="text-2xl font-bold text-foreground mt-1 font-mono">{totalClaims}</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-[#001E60] border border-amber-500/40 bg-amber-500/5 shadow-sm">
-          <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase">Review Required</span>
-          <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1 font-mono">{reviewRequired}</div>
+        <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-[#0A2340]/80 border border-amber-200/80 dark:border-amber-900/50 shadow-xs backdrop-blur-xs">
+          <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase">{t('digest.reviewRequired')}</span>
+          <div className="text-2xl font-bold text-amber-900 dark:text-amber-200 mt-1 font-mono">{reviewRequired}</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-[#001E60] border border-blue-500/40 bg-blue-500/5 shadow-sm">
-          <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase font-mono">Validated</span>
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1 font-mono">{validated}</div>
+        <div className="p-4 rounded-xl bg-teal-50/70 dark:bg-[#0A2340]/80 border border-teal-200/80 dark:border-[#1E3A5F] shadow-xs backdrop-blur-xs">
+          <span className="text-[11px] font-bold text-teal-800 dark:text-[#22D3EE] uppercase font-mono">{t('digest.validated')}</span>
+          <div className="text-2xl font-bold text-teal-900 dark:text-[#22D3EE] mt-1 font-mono">{validated}</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-[#001E60] border border-emerald-500/40 bg-emerald-500/5 shadow-sm">
-          <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase font-mono">Approved</span>
-          <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 font-mono">{approved}</div>
+        <div className="p-4 rounded-xl bg-orange-50/70 dark:bg-[#0A2340]/80 border border-orange-200/80 dark:border-orange-900/50 shadow-xs backdrop-blur-xs">
+          <span className="text-[11px] font-bold text-orange-800 dark:text-orange-300 uppercase font-mono">Unmatched Scope</span>
+          <div className="text-2xl font-bold text-orange-900 dark:text-orange-200 mt-1 font-mono">{unmatched}</div>
         </div>
 
-        <div className="p-4 rounded-xl bg-white dark:bg-[#001E60] border border-slate-200 dark:border-blue-900/60 shadow-sm col-span-2 sm:col-span-1">
-          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">On Hold</span>
-          <div className="text-2xl font-bold text-slate-700 dark:text-slate-400 mt-1 font-mono">{hold}</div>
+        <div className="p-4 rounded-xl bg-emerald-50/70 dark:bg-[#0A2340]/80 border border-emerald-200/80 dark:border-emerald-900/50 shadow-xs backdrop-blur-xs">
+          <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase font-mono">{t('digest.approved')}</span>
+          <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-200 mt-1 font-mono">{approved}</div>
+        </div>
+
+        <div className="p-4 rounded-xl bg-slate-50/80 dark:bg-[#0A2340]/80 border border-slate-200 dark:border-[#1E3A5F] shadow-xs backdrop-blur-xs">
+          <span className="text-[11px] font-bold text-muted-foreground uppercase">{t('digest.onHold')}</span>
+          <div className="text-2xl font-bold text-muted-foreground mt-1 font-mono">{hold}</div>
         </div>
       </div>
 
       {/* Bulk Action Toolbar */}
-      <div className="p-4 rounded-xl bg-white dark:bg-[#001E60] border border-slate-200 dark:border-blue-900/60 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
-        <div className="text-xs text-slate-700 dark:text-slate-300 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-[#FC4C02] shrink-0" />
+      <div className="p-4 rounded-xl bg-card border border-border flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+        <div className="text-xs text-foreground flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-primary shrink-0" />
           <span>
-            <strong>{reviewRequired + validated}</strong> claims ready for supervisor signoff for date <span className="font-mono text-[#FC4C02] font-bold">{selectedDate}</span>.
+            {t('digest.claimsReadyForSignoff', { count: reviewRequired + validated, date: selectedDate })}
           </span>
         </div>
 
         <Button
           onClick={handleBulkApprove}
           disabled={isBulking || (reviewRequired + validated === 0)}
-          className="bg-[#FC4C02] hover:bg-[#e04302] text-white text-xs font-semibold h-9 px-4 shadow-md shadow-[#FC4C02]/20 w-full sm:w-auto rounded-xl"
+          isLoading={isBulking}
+          className="text-xs font-semibold h-9 px-4 shadow-xs w-full sm:w-auto rounded-lg"
         >
           {isBulking ? (
-            <span>Processing Bulk Approval...</span>
+            <span>{t('digest.processingBulkApproval')}</span>
           ) : (
             <>
               <CheckSquare className="w-4 h-4 mr-1.5" />
-              Bulk Approve Validated Claims
+              {t('digest.bulkApprove')}
             </>
           )}
         </Button>
       </div>
 
       {bulkResult && (
-        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs flex items-center justify-between">
-          <span>Bulk approval completed: {bulkResult.approved.length} approved successfully.</span>
-          <Button variant="ghost" size="sm" onClick={() => setBulkResult(null)} className="h-6 text-xs">Dismiss</Button>
+        <div className="p-3.5 rounded-xl bg-status-approved/10 border border-status-approved/30 text-status-approved text-xs flex items-center justify-between">
+          <span>{t('digest.bulkApprovalComplete', { count: bulkResult.approved.length })}</span>
+          <Button variant="ghost" size="sm" onClick={() => setBulkResult(null)} className="h-6 text-xs">{t('common.dismiss')}</Button>
         </div>
       )}
 
       {error && (
-        <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between">
-          <span>{error}</span>
-          <Button variant="outline" size="sm" onClick={() => loadDigest(selectedDate)} className="border-rose-500/40 text-xs">
-            Retry
-          </Button>
-        </div>
+        <ErrorState
+          message={error}
+          onRetry={() => loadDigest(selectedDate)}
+        />
       )}
 
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-28 rounded-2xl bg-white dark:bg-[#001E60] border border-slate-200 dark:border-blue-900/60 animate-pulse" />
+            <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
       ) : events.length === 0 ? (
-        <Card className="bg-white dark:bg-[#001E60] border-slate-200 dark:border-blue-900/60 p-12 text-center shadow-sm">
-          <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-blue-900/60 flex items-center justify-center mx-auto text-slate-400 mb-3">
-            <Clock className="w-6 h-6" />
-          </div>
-          <h3 className="text-slate-900 dark:text-slate-100 font-bold text-base">No field claims recorded for {selectedDate}</h3>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-            Site Engineers have not submitted any voice, text, or file progress updates for this specific date.
-          </p>
-        </Card>
+        <EmptyState
+          icon={Clock}
+          title={t('digest.noClaimsForDate', { date: selectedDate })}
+          description={t('digest.noClaimsDesc')}
+        />
       ) : (
         <div className="space-y-6">
-          {DISCIPLINES.map((disc) => {
-            const discEvents = events.filter((e) => e.discipline === disc || (disc === 'CIVIL' && !e.discipline));
+          {[...DISCIPLINES, 'UNASSIGNED' as const].map((disc) => {
+            const discEvents = events.filter((e) =>
+              disc === 'UNASSIGNED' ? !e.discipline || (e.discipline as string) === 'UNASSIGNED' : e.discipline === disc
+            );
             if (discEvents.length === 0) return null;
 
             return (
               <div key={disc} className="space-y-3">
-                <div className="flex items-center gap-2 border-b border-slate-200 dark:border-blue-900/50 pb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#FC4C02] font-mono">
-                    {disc.replace('_', ' ')}
+                <div className="flex items-center gap-2 border-b border-border/70 pb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary font-mono">
+                    {t(`disciplines.${disc}` as any, { defaultValue: disc.split('_').join(' ') })}
                   </span>
-                  <span className="text-[10px] bg-slate-100 dark:bg-blue-900/60 text-slate-700 dark:text-blue-200 px-2 py-0.5 rounded-full font-mono font-semibold">
-                    {discEvents.length} claims
+                  <span className="text-[10px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full font-mono font-semibold">
+                    {t('digest.claimsCount', { count: discEvents.length })}
                   </span>
                 </div>
 
@@ -366,47 +405,47 @@ export default function DailyDigest() {
                       key={ev.event_id}
                       onClick={() => navigate(`/review?event_id=${ev.event_id}`)}
                       className={cn(
-                        'p-4 rounded-xl bg-white dark:bg-[#001E60] border transition-all cursor-pointer hover:border-[#FC4C02] shadow-sm group relative',
+                        'p-4 rounded-xl bg-card border transition-all cursor-pointer hover:border-[#FF7A18] shadow-xs group relative',
                         ev.status === 'REVIEW_REQUIRED'
-                          ? 'border-amber-500/50 bg-amber-500/[0.02]'
-                          : 'border-slate-200 dark:border-blue-900/60'
+                          ? 'border-amber-300 dark:border-amber-900/60'
+                          : 'border-border'
                       )}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {getStatusBadge(ev.status)}
-                          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">ID: {ev.event_id}</span>
-                          <span className="text-[11px] text-slate-400 font-mono">· Channel: {ev.input_channel}</span>
+                          <StatusBadge status={ev.status} size="sm" />
+                          <ProvenanceBadge channel={ev.input_channel} size="sm" />
+                          <span className="text-[11px] font-mono text-muted-foreground">{t('digest.idLabel')}: {ev.event_id}</span>
                         </div>
 
-                        <div className="text-xs text-slate-500 dark:text-slate-400 font-mono flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <div className="text-xs text-muted-foreground font-mono flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                           {ev.event_date}
                         </div>
                       </div>
 
-                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 leading-relaxed mb-3 group-hover:text-[#FC4C02]">
+                      <p className="text-sm font-semibold text-foreground leading-relaxed mb-3 group-hover:text-primary transition-colors">
                         "{ev.raw_claim_text}"
                       </p>
 
-                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-blue-900/40 text-xs">
-                        <div className="flex items-center gap-4 text-slate-600 dark:text-slate-300">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50 text-xs">
+                        <div className="flex items-center gap-4 text-muted-foreground">
                           <div>
-                            Matched Activity:{' '}
-                            <span className="font-mono text-slate-900 dark:text-white font-bold">
-                              {ev.matched_activity_id || 'Awaiting Match'}
+                            {t('digest.matchedActivity')}:{' '}
+                            <span className="font-mono text-foreground font-bold">
+                              {ev.matched_activity_id || t('digest.awaitingMatch')}
                             </span>
                           </div>
                           {ev.claimed_pct !== null && (
                             <div>
-                              Progress:{' '}
-                              <span className="font-mono text-[#FC4C02] font-bold">{ev.claimed_pct}%</span>
+                              {t('digest.progress')}:{' '}
+                              <span className="font-mono text-primary font-bold">{ev.claimed_pct}%</span>
                             </div>
                           )}
                         </div>
 
-                        <div className="text-[#FC4C02] font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                          <span>Inspect Claim</span>
+                        <div className="text-primary font-semibold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                          <span>{t('digest.inspectClaim')}</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </div>
                       </div>
